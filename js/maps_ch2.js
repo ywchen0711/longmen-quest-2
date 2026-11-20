@@ -1,5 +1,5 @@
 // Chapter 2 「水鄉」 The Water Country: Suhe City, the old Su mansion, Green Wave Cave and Wangyue Ferry.
-import { L, P, lines, chapter, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=4';
+import { L, P, lines, chapter, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=5';
 
 // 文對仗's couplet contest: he gives the first line, you choose the second
 const COUPLETS = [
@@ -60,7 +60,11 @@ const suhe = {
   people: {
     K: P('blacksmith', async (S) => { await S.say('blacksmith', L('蘇河兵器坊，南北名刀都有！', 'Suhe Armoury: famous blades from north and south!')); await S.shop('suhe'); }),
     L: P('innkeeper', async (S) => { await S.inn(12); }),
-    I: P('merchant', async (S) => { await S.say('merchant', L('燈籠、傷藥、項圈，應有盡有。', 'Lanterns, salves, collars, all you need.')); await S.shop('suhe_i'); }),
+    I: P('merchant', async (S) => {
+      await S.say('merchant', L('燈籠、傷藥、項圈，應有盡有。', 'Lanterns, salves, collars, all you need.'));
+      if (!S.has('lantern') && !S.flag('sujiaDone')) await S.say('merchant', L('要去蘇家舊宅？沒燈籠，連大門都摸不進去。六十兩一盞。', 'Going to the old Su mansion? Without a lantern you won\'t even find the door. Sixty gold.'));
+      await S.shop('suhe_i');
+    }),
     B: P('hubanxian', async (S) => huPredict(S)),
     H: P('huotianxia', async (S) => huoBrag(S)),
     J: P('jiabafang', async (S) => jiaTalk(S)),
@@ -99,8 +103,15 @@ const suhe = {
       if (r === 'win') { S.set('chu2Done'); await lines(S, [['chutiankuo', '第……第二敗！', 'Defeat... number two!'], ['chutiankuo', '你們到底跟誰學的武功？……不說就算了。這個給你們。', 'Who taught you to fight like that? ...Fine, don\'t tell me. Take this.']]); await S.give('herb2'); }
       else await S.say('chutiankuo', L('哈！我寫進冊子裡了：勝！……你們去歇歇吧。', 'Ha! Into the book: a win! ...Go and rest.'));
     }, { flag: 'ch1Done', notFlag: 'shipGot' }),
-    T: P('scholar', async (S) => { await S.say('scholar', L('蘇家的小姐，當年是蘇河城有名的美人。她哥哥去京城學馴獸，就再沒回來。', 'The Su daughter was the beauty of Suhe in her day. Her brother went to the capital to learn the taming of beasts, and never came back.')); }, { walk: 1 }),
-    U: P('fisherman', async (S) => { await S.say('fisherman', S.flag('biboDone') ? L('湖上又能打魚了！', 'We can fish the lake again!') : L('碧波湖裡那條蛟，一甩尾巴就翻了三條船。', 'The jiao in Green Wave Lake overturned three boats with one flick of its tail.')); }, { walk: 1 }),
+    T: P('scholar', async (S) => {
+      await S.say('scholar', L('蘇家的小姐，當年是蘇河城有名的美人。她哥哥去京城學馴獸，就再沒回來。', 'The Su daughter was the beauty of Suhe in her day. Her brother went to the capital to learn the taming of beasts, and never came back.'));
+      if (!S.flag('sujiaDone')) await S.say('scholar', L('蘇家舊宅在城東北，出城沿大路走就到。宅裡夜夜有人奉茶……我是不敢去的。', 'The old Su mansion is north-east of the city, along the road. Someone pours tea there every night... I would never dare go.'));
+    }, { walk: 1 }),
+    U: P('fisherman', async (S) => {
+      if (S.flag('biboDone')) return S.say('fisherman', S.flag('shipGot') ? L('湖上又能打魚了！', 'We can fish the lake again!') : L('湖上又能打魚了！你們要出海？望月渡在東南邊的海邊。', 'We can fish the lake again! Going to sea? Wangyue Ferry is on the coast to the south-east.'));
+      await S.say('fisherman', L('碧波湖裡那條蛟，一甩尾巴就翻了三條船。', 'The jiao in Green Wave Lake overturned three boats with one flick of its tail.'));
+      await S.say('fisherman', L('碧波洞就在城南的湖邊，出南門順著大路走。洞裡還有水寇，小心了。', 'Green Wave Cave is by the lake south of the city: out of the south gate and along the road. There are river pirates in there too; take care.'));
+    }, { walk: 1 }),
   },
 };
 
@@ -120,9 +131,10 @@ const sujia1 = {
     '#c...#&...mm...&#..q.#',
     '######....mm....######',
     '#.........mm.........#',
-    '##########mm##########',
+    '#########?mm##########',
   ],
   start: [10, 12],
+  looks: { '9,12': L('門邊褪色的木牌：「蘇宅。內院的樓梯在前廳東北角，後院的樓梯在內院東南角。」', 'A faded board by the door: "The Su residence. The stairs to the inner rooms are in the north-east corner of the front hall; to the back garden, in the south-east corner of the inner rooms."') },
   chests: [{ item: 'herb2' }, { item: 'antidote' }],
   links: { 1: ['sujia2', 1] },
   people: {
@@ -212,9 +224,10 @@ const bibo1 = {
     '#~~...........e.......c#',
     '#~~~~.#######.e.######.#',
     '#......................#',
-    '##########...###########',
+    '#########?...###########',
   ],
   start: [11, 12],
+  looks: { '9,12': L('漁夫釘的木牌：「洞往下兩層：先東北角，再東南角。深潭有蛟，水寇出沒。」背面還有一行：「北邊石縫裡掛著一個人，吵死了。」', 'A fisherman\'s board: "Two levels down: first the north-east corner, then the south-east. A jiao in the deep pool; pirates about." On the back: "Some man is hanging in a crack to the north. So noisy."') },
   chests: [{ item: 'herb2' }, { item: 'cl3' }],
   links: { 1: ['bibo2', 1] },
   people: {
@@ -308,7 +321,11 @@ const wangyue = {
       S.set('ship'); S.set('shipGot');
       await chapter(S, 3, '南疆', 'The Southlands');
     }),
-    A: P('woman', async (S) => { await S.say('woman', S.flag('shipGot') ? L('聽說漁火島的魚湯，喝一口就忘不了。', 'They say one sip of Fishing-fire Isle\'s fish soup and you never forget it.') : L('湖上的蛟不鬧了，港口卻還沒開。船王脾氣倔得很。', 'The jiao is quiet, but the harbour is still shut. The Ship King is a stubborn man.')); }, { walk: 1 }),
+    A: P('woman', async (S) => {
+      if (S.flag('shipGot')) return lines(S, [['woman', '聽說漁火島的魚湯，喝一口就忘不了。', 'They say one sip of Fishing-fire Isle\'s fish soup and you never forget it.'], ['woman', '南疆在西南邊的海那頭；漁火島在更東南的海上。', 'The southlands are across the sea to the south-west; Fishing-fire Isle is further south-east.']]);
+      if (S.flag('biboDone')) return S.say('woman', L('湖上的蛟不鬧了？那快去跟船王說！他就在渡口東邊的棧橋上。', 'The jiao is quiet? Then go and tell the Ship King! He\'s on the pier east of the ferry.'));
+      await S.say('woman', L('湖上的蛟還在鬧，港口一條船都出不去。船王說，誰平了江蛟，他就欠誰一個人情。', 'The jiao is still raging; not one boat can leave. The Ship King says he owes a favour to whoever calms it.'));
+    }, { walk: 1 }),
   },
 };
 

@@ -69,7 +69,7 @@ export async function chapter(S, n, zh, en) {
 }
 // a few free beasts follow you home to the camp (story rewards)
 export async function freeBeasts(S, ids) {
-  const G = S.G, R = await import('./rules.js?v=4'), { ENEMIES } = await import('./data.js?v=4');
+  const G = S.G, R = await import('./rules.js?v=5'), { ENEMIES } = await import('./data.js?v=5');
   const names = [];
   for (const id of ids) { const m = R.newMember(id, ENEMIES[id].lv); G.camp.push(m); names.push(ENEMIES[id].zh); G.stats.recruited[id] = (G.stats.recruited[id] || 0) + 1; }
   await G.audio.jingle('j_join');
@@ -77,11 +77,12 @@ export async function freeBeasts(S, ids) {
 }
 
 // ---------------------------------------------------------------- recurring characters, shared by every chapter
-import { HU_LINES, HUO_LINES, JIA_LINES } from './story_lines.js?v=4';
+import { HU_LINES, HUO_LINES, JIA_LINES, HUO_STAGE, JIA_STAGE } from './story_lines.js?v=5';
+import { stage, HU_STAGE } from './hints.js?v=5';
 const chap = (G) => (G.flags.ch3Done ? 4 : G.flags.shipGot ? 3 : G.flags.ch1Done ? 2 : 1);
 // 胡半仙 the fortune-teller: every prophecy is the opposite of what happens
-export async function huPredict(S) { const k = chap(S.G); await lines(S, HU_LINES[k]); }
+export async function huPredict(S) { const k = chap(S.G); await lines(S, HU_LINES[k]); await lines(S, HU_STAGE[stage(S.G)] || []); }
 // 霍天下 the braggart: claims whatever the party did last
-export async function huoBrag(S) { const k = chap(S.G); await lines(S, HUO_LINES[k]); }
+export async function huoBrag(S) { const k = chap(S.G); await lines(S, HUO_LINES[k]); await lines(S, HUO_STAGE[stage(S.G)] || []); }
 // 賈八方 the peddler: sells everything, his own clothes included
-export async function jiaTalk(S) { const k = chap(S.G); await lines(S, JIA_LINES[k]); await S.jia(); }
+export async function jiaTalk(S) { const k = chap(S.G); await lines(S, JIA_LINES[k]); await lines(S, JIA_STAGE[stage(S.G)] || []); await S.jia(); }

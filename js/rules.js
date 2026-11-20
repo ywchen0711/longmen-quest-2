@@ -1,6 +1,6 @@
 // The one set of rules every fighter shares - 奕叡, his companions, the monsters that join, and every enemy:
 // stats, damage, arts, items, levels, gear and the shared pack.
-import { MAX_LV, XP_FOR, curve, CHARS, SPECIES, SKILLS, ITEMS, BAG_MAX, SLOTS, HUMAN_SLOTS, MON_SLOTS, ENEMIES } from './data.js?v=4';
+import { MAX_LV, XP_FOR, curve, CHARS, SPECIES, SKILLS, ITEMS, BAG_MAX, SLOTS, HUMAN_SLOTS, MON_SLOTS, ENEMIES } from './data.js?v=5';
 
 export const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 let UID = 1;

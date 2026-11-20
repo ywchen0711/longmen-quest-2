@@ -1,6 +1,6 @@
 // Paper windows: cream notes with torn edges and dark ink in the Cubic 11 pixel font (the look is in style.css).
 // Messages type out, menus move a ▶ cursor. Every prompt returns a promise. A test driver (UI.driver) may answer prompts instead of a person.
-import { CAST } from './people_art.js?v=4';
+import { CAST } from './people_art.js?v=5';
 
 export const STR = {
   attack: ['攻擊', 'Attack'], skill: ['武功', 'Arts'], item: ['道具', 'Items'], run: ['逃走', 'Run'],
@@ -15,7 +15,7 @@ export const STR = {
   newgame: ['開始新的旅程', 'New Journey'], cont: ['繼續（自動記錄）', 'Continue (autosave)'], load: ['讀取記錄', 'Load'],
   slot: ['記錄', 'Record'], empty: ['（空白）', '(empty)'], gp: ['兩', 'g'],
   unequip: ['（卸下）', '(take off)'], drop: ['掉落', 'Drops'],
-  save: ['記錄', 'Save'], book: ['圖鑑', 'Bestiary'], use: ['使用', 'Use'], toss: ['丟掉', 'Drop'], who: ['', ''],
+  save: ['記錄', 'Save'], clue: ['線索', 'Clues'], book: ['圖鑑', 'Bestiary'], use: ['使用', 'Use'], toss: ['丟掉', 'Drop'], who: ['', ''],
 };
 let lang = 'zh';
 try { const l = localStorage.getItem('lq2_lang'); if (l === 'en' || l === 'zh') lang = l; } catch (e) {}

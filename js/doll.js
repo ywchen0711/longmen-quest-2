@@ -5,7 +5,7 @@
 // helmets, crowns, cloaks, pendants, bracers and weapons are hand-typed pixel pieces per view. The walk rule holds:
 // a piece is the same on both walk frames, only the legs (the bottom 5 rows) step.
 // Pure functions on index grids (no DOM), so the game builds a sheet once per change of gear and a test can run it.
-import { SPRITE, PORTRAIT } from './doll_base.js?v=4';
+import { SPRITE, PORTRAIT } from './doll_base.js?v=5';
 
 export const K = 0x0F, SKIN = 0x37, BLUE = 0x12;
 const W = 16, H = 24;

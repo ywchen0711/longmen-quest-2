@@ -1,6 +1,6 @@
 // Chapter 4 「萬妖峰」 The Peak of Ten Thousand Beasts: Beiyan Pass, the Snow Wolf camp, the Ice Soul Caves and the
 // Tower of Ten Thousand Beasts. The last fight starts the ending (story.js).
-import { L, P, lines, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=4';
+import { L, P, lines, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=5';
 
 // ================================================================= 北雁關 Beiyan Pass (the harbour fortress)
 const beiyan = {
@@ -39,8 +39,15 @@ const beiyan = {
         ['tiewusi', '冰魄窟後面就是萬妖峰，峰前有一道終年不化的冰牆。據說冰牆的寒氣，就是冰魄在撐著。', 'Beyond the caves stands the Peak, fronted by a wall of ice that never melts. They say the Ice Soul\'s cold holds it up.'],
         ['tiewusi', '北地的妖物比南邊兇得多。雪狼部的人熟悉這片雪原，先去問問他們。', 'The creatures of the north are far fiercer than the south\'s. The Snow Wolf tribe knows these fields; ask them first.']]);
     }),
-    S: P('guard', async (S) => { await S.say('guard', L('鐵大人一到，整座關都安靜了。他一個笑容都沒有，比北風還冷。', 'Since Lord Tie arrived the whole pass has gone quiet. He never smiles; he\'s colder than the north wind.')); }, { walk: 1 }),
-    U: P('guard', async (S) => { await S.say('guard', L('港口的鐵鍊是祖上傳下來的，一百年沒放下過。', 'The harbour chain came down from our forefathers; it hasn\'t been lowered in a hundred years.')); }),
+    S: P('guard', async (S) => {
+      await S.say('guard', L('鐵大人一到，整座關都安靜了。他一個笑容都沒有，比北風還冷。', 'Since Lord Tie arrived the whole pass has gone quiet. He never smiles; he\'s colder than the north wind.'));
+      if (!S.flag('bingpoDone')) await S.say('guard', L('出關往西北的大路通雪狼部；往東的大路通冰魄窟。', 'The north-west road out of the pass goes to the Snow Wolf camp; the east road to the Ice Soul Caves.'));
+    }, { walk: 1 }),
+    U: P('guard', async (S) => {
+      await S.say('guard', L('港口的鐵鍊是祖上傳下來的，一百年沒放下過。', 'The harbour chain came down from our forefathers; it hasn\'t been lowered in a hundred years.'));
+      if (S.flag('bingpoDone')) await S.say('guard', L('冰牆塌了？那萬妖塔的路就在冰魄窟東邊，穿過山口就是。', 'The ice wall fell? Then the way to the Tower is east of the Ice Soul Caves, through the gap in the peaks.'));
+      else await S.say('guard', L('冰魄窟裡冷得要命，聽說最深處的冰心藏著冰魄。冰窟的路：一層往東北，冰河那層往正中下去。', 'The Ice Soul Caves are bitterly cold; they say the Ice Soul lies in the Heart of Ice at the bottom. The way: north-east on the first level, down through the middle on the Frozen River.'));
+    }),
   },
 };
 
@@ -90,9 +97,10 @@ const bingpo1 = {
     '###n####nnnnnn#nnn*n#nnnn#',
     '#nnnnnn#n####n#n###n#n#c##',
     '#n*nnnnnnn^^^n#nnnnnnn#nn#',
-    '###########nnn############',
+    '##########?nnn############',
   ],
   start: [12, 11],
+  looks: { '10,11': L('雪狼部獵人的刻痕：「冰窟三層。上層往東北，冰河那層從正中往下。冰心最冷。」', 'A Snow Wolf hunter\'s marks: "Three levels. North-east on the top level; down through the middle on the Frozen River. The Heart of Ice is coldest."') },
   chests: [{ item: 'frostjade' }, { item: 'herb2' }],
   links: { 1: ['bingpo2', 1] },
 };
@@ -151,8 +159,8 @@ const wanyao1 = T(L('萬妖塔', 'Tower of Ten Thousand Beasts'), [
   '#........X..........#',
   '#####.####.#####.####',
   '#&.......mmm.......&#',
-  '#########mmm#########',
-], { start: [10, 10], chests: [{ item: 'herb2' }, { item: 'cl6' }], links: { 1: ['wanyao2', 1] },
+  '########?mmm#########',
+], { start: [10, 10], looks: { '8,10': L('塔門的石碑：「萬妖塔五重。一重北上，二重東南，三重石獅，四重西南，五重鈴心。」', 'A stele at the tower gate: "Five storeys. North from the first, south-east from the second, the stone lion on the third, south-west from the fourth; the bell\'s heart on the fifth."') }, chests: [{ item: 'herb2' }, { item: 'cl6' }], links: { 1: ['wanyao2', 1] },
   people: {
     X: P('xiaotian', async (S) => {
       if (!S.flag('lengMet')) {
@@ -215,10 +223,10 @@ const wanyao5 = T(L('萬妖塔・鈴心殿', 'Tower: Hall of the Bell\'s Heart')
 ], { enc: null, music: 'tower', links: { 4: ['wanyao4', 4] },
   boss: { id: 'b_mowuya', flag: 'finalDone', s: 'mowuya', music: 'beasts',
     preFn: async (S) => {
-      const story = await import('./story.js?v=4'); await story.finalPre(S);
+      const story = await import('./story.js?v=5'); await story.finalPre(S);
     },
     postFn: async (S) => {
-      const story = await import('./story.js?v=4'); await story.finalPost(S);
+      const story = await import('./story.js?v=5'); await story.finalPost(S);
     } } });
 
 export const CH4 = { beiyan, xuelang, bingpo1, bingpo2, bingpo3, wanyao1, wanyao2, wanyao3, wanyao4, wanyao5 };

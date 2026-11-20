@@ -1,6 +1,6 @@
 // Chapter 1 「鈴聲」 The Bell: Longmen, Xinghua Village, the Hundred Beasts Camp, the Wolf Slope, Luoxia Town and
 // the Bell Temple.
-import { L, P, lines, chapter, freeBeasts } from './maps_base.js?v=4';
+import { L, P, lines, chapter, freeBeasts } from './maps_base.js?v=5';
 
 // ================================================================= 龍門鎮 Longmen Town (home)
 const longmen = {
@@ -47,7 +47,12 @@ const longmen = {
     }),
     B: P('oldman', async (S) => {
       if (S.flag('ch3Done')) return S.say('oldman', L('老奴聽說，兩位少爺連北邊的冰山都要去了？……多穿件衣裳啊。', 'This old servant hears the young masters are off to the icy north? ...Wear something warm.'));
-      if (S.flag('ch1Done')) return S.say('oldman', L('鈴音寺的事都傳開了！老爺地下有知，也會笑的。', 'Word of the Bell Temple is everywhere! Your father would smile, wherever he is.'));
+      if (S.flag('ch1Done')) return lines(S, [['oldman', '鈴音寺的事都傳開了！老爺地下有知，也會笑的。', 'Word of the Bell Temple is everywhere! Your father would smile, wherever he is.'], ...(S.flag('biboDone') ? [] : [['oldman', '斷橋修好了，過了落霞鎮往東北的大橋，就是水鄉蘇河城。', 'The bridge is mended: past Luoxia, the great bridge to the north-east leads to the canal city of Suhe.']])]);
+      const st = S.stage();
+      if (st === 'bai') await S.say('oldman', L('白先生在聽雨樓等著呢，就是北邊正中那座大屋。', 'Mr Bai is waiting in the Listening Rain House: the big hall in the middle of the north side.'));
+      if (st === 'camp') await S.say('oldman', L('牛飽飽？老奴聽說他在杏花村北邊的廢寨裡，養了一屋子妖怪。杏花村出鎮往東北，順著大路走就到。', 'Niu Baobao? I hear he keeps a houseful of creatures in the old stockade north of Xinghua. Xinghua is north-east of town, straight up the road.'));
+      if (st === 'yelang') await S.say('oldman', L('野狼坡在往杏花村的岔路口改往西北走。二少爺，小心狼啊！', 'Wolf Slope? At the fork on the Xinghua road, turn north-west. Careful of the wolves, young master!'));
+      if (st === 'temple') await S.say('oldman', L('鈴音寺？落霞鎮在東南邊，寺就在落霞鎮東北的山上。', 'The Bell Temple? Luoxia Town is south-east of here, and the temple is on the mountain north-east of Luoxia.'));
       await S.say('oldman', L('二少爺！您又要跟著大少爺出門？……唉，老奴攔不住。這是給您二位路上買傷藥的錢。', 'Young master! Off with your brother again? ...I can\'t stop you. Here is money for salves on the road.'));
       if (!S.flag('stewardGold')) { S.set('stewardGold'); S.gold(60); S.sfx('buy'); await S.say(null, L('得到 60 兩銀子。', 'Received 60 gold.')); }
     }, { walk: 1 }),
@@ -60,10 +65,14 @@ const longmen = {
       if (!F('ch3Done')) return S.say('hubanxian', L('那位莫大夫啊？天下第一好人，記性也是天下第一好！', 'Doctor Mo? The kindest man under heaven, with the best memory under heaven!'));
       return S.say('hubanxian', L('萬妖峰？你們上去……一定打不贏。不準不要錢！', 'The Peak of Ten Thousand Beasts? Go up there and... you will surely lose. No charge if I\'m wrong!'));
     }),
-    D: P('child', async (S) => { await S.say('child', L('奕碩哥哥的球，上次把一隻瘋狗踢得飛過了屋頂！', 'Yi Shuo\'s ball once kicked a mad dog right over a roof!')); }, { walk: 1 }),
+    D: P('child', async (S) => {
+      await S.say('child', L('奕碩哥哥的球，上次把一隻瘋狗踢得飛過了屋頂！', 'Yi Shuo\'s ball once kicked a mad dog right over a roof!'));
+      if (!S.flag('yelangDone')) await S.say('child', L('我哥說，野狼坡上的狼窟在坡頂的東北角，洞口黑漆漆的，他不敢靠近！', 'My brother says the wolf den on Wolf Slope is in the north-east corner at the top. The mouth is pitch black; he didn\'t dare go near!'));
+    }, { walk: 1 }),
     E: P('guard', async (S) => {
       if (S.flag('ch1Done')) return S.say('guard', L('聽說東邊的斷橋修好了，蘇河城的商隊又能過來了。', 'They say the broken bridge to the east is mended; the Suhe caravans can come again.'));
       await S.say('guard', L('鎮外的灰狼一到夜裡就嚎，嚎得跟哭一樣。我守了十年門，沒聽過這種聲音。', 'The grey wolves outside town howl every night, almost like weeping. Ten years on this gate and I\'ve never heard the like.'));
+      await S.say('guard', L('出鎮往東北的大路，走到岔路口：往東北是杏花村，往西北是野狼坡。往東南的路通落霞鎮。', 'Take the north-east road out of town to the fork: north-east is Xinghua, north-west is Wolf Slope. The south-east road goes to Luoxia.'));
     }),
     K: P('blacksmith', async (S) => { await S.say('blacksmith', L('龍門鐵匠鋪！刀、棍、球，連小少爺的球都有。', 'Longmen Smithy! Blades, cudgels, even balls for the young master.')); await S.shop('longmen_w'); }),
     L: P('innkeeper', async (S) => { await S.inn(5); }),
@@ -106,16 +115,21 @@ const xinghua = {
     A: P('oldman', async (S) => {
       if (S.flag('yelangDone')) return S.say('oldman', L('狼不嚎了。這幾夜，村裡總算睡得著覺。', 'The wolves have stopped howling. The village can sleep at last.'));
       await lines(S, [['oldman', '北邊廢寨的牛飽飽啊，養了一屋子妖怪，雞都不敢往那邊走。', 'Niu Baobao up at the old stockade keeps a whole house of creatures; even the chickens won\'t go that way.'],
-        ['oldman', '西北的野狼坡，最近狼嚎得厲害。一支鏢隊上去，就再沒下來。', 'Wolf Slope to the north-west howls worse every night. A caravan went up and never came down.']]);
+        ['oldman', '西北的野狼坡，最近狼嚎得厲害。一支鏢隊上去，就再沒下來。', 'Wolf Slope to the north-west howls worse every night. A caravan went up and never came down.'],
+        ['oldman', '去野狼坡，出村往南回到岔路口再往西北。坡上岔路多，狼窟的洞口在東北角。', 'For Wolf Slope, go south out of the village to the fork, then north-west. The slope is a maze; the den\'s mouth is in the north-east corner.']]);
     }),
     B: P('woman', async (S) => {
       if (S.flag('yelangDone')) {
         if (!S.flag('xhBun')) { S.set('xhBun'); await S.say('woman', L('狼不來了！謝謝你們！這幾個肉包，自家蒸的，拿著！', 'The wolves are gone! Thank you! Here, buns I steamed myself!')); await S.give('bun', true); await S.give('bun', true); await S.give('bun'); return; }
+        if (S.stage() === 'temple') return S.say('woman', L('雞又敢出門啦。對了，落霞鎮來了一位老和尚，到處打聽鈴音寺的事。', 'The chickens dare go out again. Oh, an old monk has come to Luoxia Town, asking everyone about the Bell Temple.'));
         return S.say('woman', L('雞又敢出門啦。', 'The chickens dare go out again.'));
       }
       await S.say('woman', L('我家的雞被狼叼走了三隻……要是有人能讓那些狼安分點就好了。', 'The wolves took three of my hens... if only someone could calm them.'));
     }, { walk: 1 }),
-    C: P('child', async (S) => { await S.say('child', L('牛叔叔說，被打醒的妖怪，會想跟著打醒牠的人！我也想要一隻。', 'Uncle Niu says a creature you knock sense into wants to follow you! I want one too.')); }, { walk: 1 }),
+    C: P('child', async (S) => {
+      await S.say('child', L('牛叔叔說，被打醒的妖怪，會想跟著打醒牠的人！我也想要一隻。', 'Uncle Niu says a creature you knock sense into wants to follow you! I want one too.'));
+      if (!S.flag('campOpen')) await S.say('child', L('牛叔叔的山寨就在村子東北邊，圍著籬笆的那個！門口有牌子。', 'Uncle Niu\'s camp is just north-east of the village, the one with the fence! There\'s a sign at the gate.'));
+    }, { walk: 1 }),
   },
 };
 
@@ -185,12 +199,13 @@ const yelang1 = {
     '",,,,"""",,,,,,,,""",c,"',
     '","",,,,,,,""",,,,,,,,,"',
     '",,,,,,"",,,,,,,""",,,,"',
-    '"""""""""",,,,""""""""""',
+    '"""""""""?,,,,""""""""""',
     '         ",,,,"         ',
   ],
   start: [11, 15],
   chests: [{ item: 'herb' }, { gold: 60 }],
   links: { 1: ['yelang2', 1] },
+  looks: { '9,14': L('獵戶釘的木牌：「野狼坡岔路多。狼窟的洞口在坡頂東北角。狼多，結伴而行。」', 'A hunter\'s board: "Wolf Slope is full of forks. The den\'s mouth is in the north-east corner at the top. Many wolves: travel in company."') },
   people: {
     J: P('jiabafang', async (S) => {
       if (!S.flag('metJia')) {
@@ -198,7 +213,7 @@ const yelang1 = {
         await lines(S, [
           ['jiabafang', '哎喲喲，救命恩人！在下賈八方，人稱「八方通」，天底下沒有我不賣的東西！', 'Oh, my saviours! I am Jia Bafang, "Jia of the Eight Directions". There is nothing under heaven I won\'t sell!'],
           ['jiabafang', '我的鏢隊被狼群衝散，貨全丟了。為了脫身，我連腳上的鞋都賣給了一個路過的獵戶……', 'Wolves scattered my caravan and the goods are gone. To get away I even sold the shoes off my feet to a passing hunter...'],
-          ['jiabafang', '我的鏢頭武大膽往洞裡跑了——他說是去「誘敵深入」。你們要是見到他，叫他回來！', 'My escort, Wu Dadan, ran into the cave. "Luring the enemy in," he said. If you see him, tell him to come back!'],
+          ['jiabafang', '我的鏢頭武大膽往坡頂東北角的狼窟裡跑了——他說是去「誘敵深入」。你們要是見到他，叫他回來！', 'My escort, Wu Dadan, ran into the wolf den in the north-east corner at the top. "Luring the enemy in," he said. If you see him, tell him to come back!'],
           ['yishuo', '哥，他真的光著腳。', 'Brother, he really is barefoot.'],
         ]);
       }
@@ -220,11 +235,12 @@ const yelang2 = {
     '#....#.#...#...#...#',
     '#.##.#.#.p.#.#.###.#',
     '#c#..#...#...#....1#',
-    '####################',
+    '##################?#',
   ],
   chests: [{ item: 'c2' }, { item: 'wing' }],
   links: { 1: ['yelang1', 1] },
   looks: {
+    '18,10': L('石壁上刻著歪歪扭扭的字：「虎在窟心。——還有，洞中間那口大酒罈會發抖，別問我為什麼。」', 'Crooked letters scratched in the rock: "The tiger is in the heart of the den. Also, the big wine jar in the middle shakes. Don\'t ask me why."'),
     '9,8': async (S) => {
       if (!S.flag('yelangDone')) return S.say(null, L('一口大酒罈在發抖。裡面好像有人。', 'A big wine jar is shaking. Someone seems to be inside.'));
       if (S.inParty('wudadan')) return S.say(null, L('一口空酒罈，還有點汗味。', 'An empty wine jar. It smells faintly of sweat.'));
@@ -316,8 +332,13 @@ const luoxia = {
     W: P('man', async (S) => {
       if (S.flag('ch1Done')) return S.say('man', L('斷橋修好了！用的是鈴音寺的舊樑，結實得很。', 'The bridge is fixed! Made from the Bell Temple\'s old beams. Solid as anything.'));
       await S.say('man', L('東邊的大橋被發狂的河怪撞斷了。要修，得有好木料……鈴音寺裡倒是有不少老樑。', 'A maddened river beast smashed the big bridge to the east. Mending it needs good timber... the Bell Temple has plenty of old beams.'));
+      if (S.flag('yelangDone')) await S.say('man', L('鈴音寺在鎮子東北的山上：出鎮往北，看見路牌就順著上山的小路走。', 'The Bell Temple is on the mountain north-east of town: go north out of town and follow the signpost up the mountain path.'));
     }, { walk: 1 }),
-    X: P('woman', async (S) => { await S.say('woman', L('擂台上那個楚家小子，天天找人比劍，輸了就往小冊子上記。', 'That Chu boy on the arena challenges everyone, and writes every loss in his little book.')); }, { walk: 1 }),
+    X: P('woman', async (S) => {
+      await S.say('woman', L('擂台上那個楚家小子，天天找人比劍，輸了就往小冊子上記。', 'That Chu boy on the arena challenges everyone, and writes every loss in his little book.'));
+      if (S.stage() === 'temple' && !S.flag('kuchanTaught')) await S.say('woman', L('千佛寺的苦禪大師借住在鎮子東邊那間屋子裡，聽說在找鈴音寺的線索。', 'Abbot Kuchan of the Thousand Buddha Temple is staying in the house on the east side of town. They say he is looking for clues about the Bell Temple.'));
+      if (!S.flag('yelangDone')) await S.say('woman', L('野狼坡的事？從龍門往杏花村的岔路口往西北。', 'Wolf Slope? From the fork on the Longmen-Xinghua road, go north-west.'));
+    }, { walk: 1 }),
   },
 };
 
@@ -339,7 +360,7 @@ const lingyin1 = {
     '#,,,,,,,,,,,:,,,,,,,,,,,,#',
     '#,,+,,,,,,,,:,,,,,,,,,+,,#',
     '#,,,,,,,,,,,:,,,,,,,,,,,,#',
-    '############:#############',
+    '###########?:#############',
   ],
   start: [12, 14],
   chests: [{ item: 'herb' }, { item: 'cl2' }],
@@ -404,5 +425,8 @@ const lingyin3 = {
       await chapter(S, 2, '水鄉', 'The Water Country');
     } },
 };
+
+lingyin1.looks['11,14'] = L('寺門的告示被撕了一半：「……知客僧留：大殿的樓梯在東南角，鐘樓在最上面。兩旁鈴形門，以鈴片開之……」', 'The notice at the gate is half torn away: "...from the guest-master: the Great Hall\'s stairs are in the south-east corner; the bell tower is at the top. The bell-shaped side doors open to the shard..."');
+{ const hu = longmen.people.C.say; longmen.people.C.say = async (S) => { await hu(S); const { HU_STAGE, stage } = await import('./hints.js?v=5'); await lines(S, HU_STAGE[stage(S.G)] || []); }; }
 
 export const CH1 = { longmen, xinghua, camp, yelang1, yelang2, luoxia, lingyin1, lingyin2, lingyin3 };

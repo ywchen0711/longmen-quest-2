@@ -12,9 +12,9 @@ import * as THREE from 'three';
 import { EffectComposer } from '../lib/addons/EffectComposer.js';
 import { RenderPass } from '../lib/addons/RenderPass.js';
 import { ShaderPass } from '../lib/addons/ShaderPass.js';
-import { tex, spr, FACES, SPR, POP } from './tiles.js?v=4';
-import { TILES } from './maps.js?v=4';
-import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=4';
+import { tex, spr, FACES, SPR, POP } from './tiles.js?v=5';
+import { TILES } from './maps.js?v=5';
+import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=5';
 
 // the one full-screen pass: a light depth-of-field blur away from the focus band (one pass, 9 taps where blurred,
 // 1 tap in focus), the linear -> sRGB step and the grade (warm tint, vignette, fades and flashes)
@@ -346,7 +346,7 @@ export class View {
   }
 
   // the overworld: rows of tile letters plus the places and which gates are open
-  buildWorld(W, places, open) {
+  buildWorld(W, places, open, signs = []) {
     this.clear(); const rows = W; const H = rows.length, Wd = rows[0].length; this.size = [Wd, H];
     const r = mulberry(5), dyn = this.dyn; dyn.rope = []; dyn.chain = []; dyn.ice = [];
     const LAND = { '.': 'grass', '=': 'road', f: 'forestFloor', h: 'grass', s: 'sand', w: 'swamp', n: 'snow', M: 'grass', N: 'snow', b: 'bambooFloor', V: 'volcRock', K: 'snow' };
@@ -373,6 +373,7 @@ export class View {
       if (c === '.' && r() < 0.02) this.sprite('bush', x + 0.5, z + 0.6, 0.6);
     } }
     for (const [x, z, look] of Object.values(places)) this.placeModel(x, z, look);
+    for (const [x, z] of signs) this.sprite('sign', x + 0.5, z + 0.6, 0.85);
     this.printGround(0, 0, Wd, H, (x, z) => ground[z][x]);
     this.finishPieces(); this.setOpen(open);
     this.camDist = 21 * ZOOM; this.theme({ paper: 0xf3e8cf }); this.dark(false);

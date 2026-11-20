@@ -21,6 +21,27 @@ export const HUO_LINES = {
   4: [['huotianxia', '赤焰窟的火鴉？我吹了口氣，就把牠的火吹熄了！北邊冷？我霍天下一身是火，不怕冷！……阿嚏！', 'The fire crow of the Red Flame Caves? I blew out its flames with one breath! The cold north? Huo Tianxia is all fire inside, cold can\'t touch me! ...Achoo!']],
 };
 
+// 霍天下 also brags of the deed you are about to do (so he names the place: a plain hint in his voice)
+export const HUO_STAGE = {
+  temple: [['huotianxia', '鈴音寺那幫搖鈴的？等我改天上山——落霞鎮往北那條山路，一拳一個！', 'Those bell-ringers at the Bell Temple? One of these days I\'ll go up - that mountain path north of Luoxia - and floor them one punch each!']],
+  water: [['huotianxia', '碧波洞的江蛟？等我吃飽了就去城南的湖邊，把牠打成泥鰍！', 'The jiao of Green Wave Cave? Once I\'ve eaten I\'ll go down to the lake south of the city and beat it into an eel!']],
+  ship: [['huotianxia', '望月渡的船王一見我霍天下，船都是白送的！就在東南的海邊，不信你們去問！', 'The Ship King of Wangyue gives his ships away free to Huo Tianxia! Down on the south-east shore. Go ask him!']],
+  south: [['huotianxia', '南疆我熟！毒龍沼在青竹寨西邊，赤焰窟在焰口村東邊的火山裡，都是我的地盤！', 'I know the south! Poison Dragon Marsh is west of Green Bamboo, the Red Flame Caves are in the volcano east of Yankou. All my turf!']],
+  inn: [['huotianxia', '回漁火島的客棧歇歇？去吧去吧，那裡的魚湯是我發明的！', 'Back to the inn on Fishing-fire Isle for a rest? Go, go: I invented their fish soup!']],
+  north: [['huotianxia', '冰魄窟？就在北雁關東邊，沿大路走就到。我先……先暖暖手。', 'The Ice Soul Caves? Just east of Beiyan Pass, along the road. I\'ll... warm my hands first.']],
+  peak: [['huotianxia', '萬妖塔？我先上去探路了，你們慢慢來！', 'The Tower? I\'ll scout ahead, you take your time!'], [null, '（他往反方向走了。）', '(He walks off the other way.)']],
+};
+
+// 賈八方 throws in a bit of news with his wares
+export const JIA_STAGE = {
+  temple: [['jiabafang', '消息免費送：鈴音寺大殿兩旁那兩扇鈴形的門，用鈴片就開得了，裡面的寶貝我眼紅好久了。', 'Free news with every sale: the two bell-shaped doors on either side of the temple\'s Great Hall open to the bell shard. I\'ve had my eye on what\'s inside for ages.']],
+  water: [['jiabafang', '要去蘇家舊宅？燈籠一定要帶，裡面黑得很！我的燈籠賣完了，去城裡的雜貨鋪買吧。', 'Off to the old Su mansion? Take a lantern, it\'s black as ink in there! I\'m sold out; try the general store in town.']],
+  ship: [['jiabafang', '想出海？望月渡的船王最講義氣，報上柳閣主的名字準沒錯。', 'Want to sail? The Ship King of Wangyue is a man of honour. Mention Mistress Liu and you\'re set.']],
+  south: [['jiabafang', '南疆的毒蟾會噴毒，解毒草多帶幾棵！我這兒……也賣完了。', 'The venom toad of the south spits poison: take plenty of antidotes! Mine are... sold out too.']],
+  north: [['jiabafang', '北地冷，冰魄窟更冷。雪狼部的皮襖比我這只木桶暖多了。雪狼部在北雁關西北。', 'The north is cold, the Ice Soul Caves colder. Snow Wolf hides are warmer than my barrel. The camp is north-west of Beiyan.']],
+  peak: [['jiabafang', '萬妖塔頂？聽說要帶還魂丹，越多越好。我這兒正好有……一顆都沒有。', 'The top of the Tower? They say take soul pills, as many as you can. I happen to have... none at all.']],
+};
+
 // 賈八方: sells a little more of himself in every chapter
 export const JIA_LINES = {
   1: [['jiabafang', '賈八方，天下沒有我不賣的東西！鞋？已經賣了。今天賣這雙……啊，那是你們要買回去的我的鞋。', 'Jia Bafang: nothing under heaven I won\'t sell! Shoes? Sold already. Today... ah, those ARE my shoes, if you want to buy them back.']],

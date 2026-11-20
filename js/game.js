@@ -1,18 +1,19 @@
 // The game: where the party is, walking on tile maps (the leader in front, the others following in a line), the
 // ship, people and their scripts, chests, doors, encounters, recruiting monsters, the camp, menus, inns, shops,
 // saving and the story's turning points. The view only draws what this holds.
-import { MAPS, PLACES, TILES, L, TOWNS } from './maps.js?v=4';
-import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map.js?v=4';
-import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=4';
-import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=4';
-import { NES, spr } from './tiles.js?v=4';
-import { registerSheet } from './view.js?v=4';
-import { dieCut } from './paper.js?v=4';
-import { PEOPLE, CAST } from './people_art.js?v=4';
-import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=4';
-import * as R from './rules.js?v=4';
-import { battle, ENEMY_IMG } from './battle.js?v=4';
-import { t, STR, getLang, setLang, nameOf } from './ui.js?v=4';
+import { MAPS, PLACES, TILES, L, TOWNS } from './maps.js?v=5';
+import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map.js?v=5';
+import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=5';
+import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=5';
+import { NES, spr } from './tiles.js?v=5';
+import { registerSheet } from './view.js?v=5';
+import { dieCut } from './paper.js?v=5';
+import { PEOPLE, CAST } from './people_art.js?v=5';
+import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=5';
+import * as R from './rules.js?v=5';
+import { battle, ENEMY_IMG } from './battle.js?v=5';
+import { t, STR, getLang, setLang, nameOf } from './ui.js?v=5';
+import { stage, objective, SIGNS, SIGN_AT } from './hints.js?v=5';
 
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const SAVE_KEYS = ['lq2_slot1', 'lq2_slot2', 'lq2_slot3'];
@@ -126,6 +127,7 @@ export class Game {
   passable(x, y) {
     const c = this.tile(x, y);
     if (this.map === 'world') {
+      if (SIGN_AT[x + ',' + y]) return false;
       if (this.onShip) {   // at sea: water (and the lowered chain); stepping on land goes ashore
         if (c === '~') return true;
         if (c === 'H') return !!this.flags.chain;
@@ -163,7 +165,7 @@ export class Game {
   async enterWorld(x, y) {
     this.map = 'world'; this.x = x; this.y = y; this.dir = 'down'; this.moving = null; this.npcs = []; this.trail = [];
     if (!this.ship && this.flags.ship) this.ship = { x: SHIP_START[0], y: SHIP_START[1] };
-    if (this.view) { const pl = {}; for (const [k, [px, py]] of Object.entries(PLACE_AT)) pl[k] = [px, py, PLACES[k].look]; this.view.buildWorld(WORLD, pl, this.worldOpen()); this.setupActors(); }
+    if (this.view) { const pl = {}; for (const [k, [px, py]] of Object.entries(PLACE_AT)) pl[k] = [px, py, PLACES[k].look]; this.view.buildWorld(WORLD, pl, this.worldOpen(), SIGNS); this.setupActors(); }
     this.audio.play(this.onShip ? 'sea' : 'field');
     this.autosave();
   }
@@ -256,9 +258,10 @@ export class Game {
     const msg = c === 'X' ? L('橋斷了，只剩幾根木樁立在急流裡。', 'The bridge is broken: only a few posts stand in the rushing water.')
       : c === 'H' ? L('一條粗大的鐵鍊攔住了港口。', 'A thick iron chain bars the harbour mouth.')
         : c === 'K' ? L('一道冰牆擋住了山路，冷得刺骨。', 'A wall of ice blocks the mountain path, bitterly cold.')
-          : (c === '~' && !this.onShip) ? null : null;
+          : SIGN_AT[nx + ',' + ny] ? this.signText(SIGN_AT[nx + ',' + ny]) : null;
     if (msg && this.hintAt !== nx + ',' + ny) { this.hintAt = nx + ',' + ny; this.run(async () => { await this.ui.say(null, msg); }); }
   }
+  signText(l) { return L('路牌上寫著：' + l.zh, 'The signpost reads: ' + l.en); }
   async run(fn) { this.busy++; try { return await fn(); } finally { this.busy--; } }
 
   async afterStep() {
@@ -410,7 +413,7 @@ export class Game {
       let n = this.npcAt(x, y);
       if (!n && this.map !== 'world' && this.tile(x, y) === '=') { x += dx; y += dy; n = this.npcAt(x, y); }
       if (n) { n.dir = { up: 'down', down: 'up', left: 'right', right: 'left' }[this.dir]; return this.talk(n); }
-      if (this.map === 'world') return this.ui.say(null, L('四下無人。', 'There is no one here.'));
+      if (this.map === 'world') return this.ui.say(null, SIGN_AT[x + ',' + y] ? this.signText(SIGN_AT[x + ',' + y]) : L('四下無人。', 'There is no one here.'));
       const c = this.tile(x, y), k = x + ',' + y;
       if (c === 'c') return this.openChest(x, y);
       if (c === 'd' && !this.isOpen(k)) {
@@ -460,6 +463,7 @@ export class Game {
       shop: (id) => G.shop(id), inn: (p) => G.inn(p), storyteller: () => G.storyteller(), camp: () => G.campMenu(), swap: () => G.swapMenu(), jia: () => G.jiaShop(),
       teach: async (who, k) => { const m = G.memberOf(who) || G.hero; if (!m.learned.includes(k)) m.learned.push(k); await G.audio.jingle('j_item'); await ui.say(null, L(R.nameOf(m, 'zh') + '學會了「' + SKILLS[k].zh + '」！', R.nameOf(m, 'en') + ' learned ' + SKILLS[k].en + '!')); },
       join: (who, lv) => G.join(who, lv), inParty: (who) => !!G.memberOf(who), active: (who) => G.party.some((m) => m.who === who),
+      stage: () => stage(G), stageIn: (...ks) => ks.includes(stage(G)),
       battle: (ids, opts) => G.fight(ids, opts || {}), jingle: (n) => G.audio.jingle(n), sfx: (n) => G.audio.sfx(n), music: (n) => (n ? G.audio.play(n) : G.audio.stop()),
       wait: (ms) => (G.fast ? Promise.resolve() : sleep(ms)), fadeOut: () => G.fadeOut(), fadeIn: () => G.fadeIn(), flash: async () => { if (G.view && !G.fast) for (let i = 0; i < 6; i++) { G.view.flash(i % 2 ? 0.8 : 0.1); await sleep(80); } if (G.view) G.view.flash(0); },
       respawn: () => { G.spawnPeople(); if (G.view) G.setupActors(); }, heal: () => { for (const m of [...G.party, ...G.camp]) R.fullHeal(m); },
@@ -493,8 +497,9 @@ export class Game {
   // ---------------------------------------------------------------- the storyteller, inns, shops, the camp
   async storyteller() {
     const ui = this.ui, B = 'baixian', F = this.flags;
-    const hint = storyHint(this);
-    await ui.say(B, hint);
+    const o = objective(this);
+    if (stage(this) === 'end') await ui.say(B, L('這段書，總算說完了。', 'This tale is finally told.'));
+    else { await ui.say(B, o.now); if (o.more[0]) await ui.say(B, o.more[0]); }
     const lead = this.hero, n = R.xpToNext(lead);
     if (n > 0) await ui.say(B, L('依老夫看，奕叡再得 ' + n + ' 點經驗，功力便可更上一層。', 'By my reckoning, ' + n + ' more experience and Yi Rui will grow stronger again.'));
     if (await ui.yesno(L('要把你們的事蹟記錄下來嗎？', 'Shall I write down your deeds so far?'), B)) await this.saveMenu({ map: 'longmen', x: 15, y: 4 });
@@ -671,20 +676,30 @@ export class Game {
       const ui = this.ui;
       for (;;) {
         const panel = ui.panel('fieldstat', this.partyHTML());
-        const c = await ui.choose([STR.skill, STR.item, STR.equip, STR.status, ['隊伍', 'Party'], STR.book, STR.config, STR.save, STR.close], { cls: 'fieldmenu', ctx: 'field' });
+        const c = await ui.choose([STR.skill, STR.item, STR.equip, STR.status, STR.clue, ['隊伍', 'Party'], STR.book, STR.config, STR.save, STR.close], { cls: 'fieldmenu', ctx: 'field' });
         panel.remove();
-        if (c < 0 || c === 8) break;
+        if (c < 0 || c === 9) break;
         if (c === 0) { if (await this.fieldSkill()) break; }
         else if (c === 1) { if (await this.itemMenu()) break; }
         else if (c === 2) await this.equipMenu();
         else if (c === 3) await this.statusMenu();
-        else if (c === 4) await this.orderMenu();
-        else if (c === 5) await this.bestiary();
-        else if (c === 6) await this.settings();
-        else if (c === 7) await this.saveMenu();
+        else if (c === 4) await this.clues();
+        else if (c === 5) await this.orderMenu();
+        else if (c === 6) await this.bestiary();
+        else if (c === 7) await this.settings();
+        else if (c === 8) await this.saveMenu();
       }
     });
     if (this.mode === 'menu') this.mode = 'field';
+  }
+  // 線索: the current objective in a line or two, worked out from the flags; a second press shows more detail
+  async clues() {
+    const o = objective(this), ui = this.ui;
+    const body = (more) => `<div class="cluehead">${t(['線索', 'Clues'])}</div><div class="cluenow">${t(o.now)}</div>` + (more ? o.more.map((l) => `<div class="cluemore">・${t(l)}</div>`).join('') : `<div class="cluetip">${t(['（再按「更多提示」看詳情）', '(Press "More detail" for more)'])}</div>`);
+    const p = ui.panel('cluewin', body(false));
+    const i = await ui.choose([['更多提示', 'More detail'], STR.close], { cls: 'tiny', ctx: 'clue' });
+    if (i === 0) { p.innerHTML = body(true); await ui.choose([STR.close], { cls: 'tiny', ctx: 'clue2' }); }
+    p.remove();
   }
   partyHTML() {
     return this.party.map((m) => { const s = R.stat(m); return `<div class="pmem${m.hp <= 0 ? ' dead' : m.hp <= s.maxHp / 4 ? ' low' : ''}"><b>${R.nameOf(m, getLang())}</b><span>${t('lv')}${m.lv}</span><span>${t('hp')}${m.hp}/${s.maxHp}</span><span>${t('mp')}${m.mp}/${s.maxMp}</span>${m.poison ? `<span class="psn">${t(['毒', 'PSN'])}</span>` : ''}</div>`; }).join('') + `<div class="pgold">${t('gold')} ${this.inv.gold}</div>`;
@@ -887,20 +902,3 @@ function shortStats(id) { const it = ITEMS[id], o = []; for (const [k, zh, en] o
 export function mapName(id) { if (id === 'world') return t(['野外', 'Wilds']); const M = MAPS[id]; return M ? t(M.name) : id; }
 // which chapter the story has reached (1-4)
 export function chapterOf(F) { return F.ch3Done ? 4 : F.shipGot ? 3 : F.ch1Done ? 2 : 1; }
-// 白先生's hint for what to do next
-function storyHint(G) {
-  const F = G.flags;
-  if (!F.campOpen) return L('杏花村北邊有座廢寨，聽說住了個怪人，專收被打醒的妖物。去看看吧。', 'North of Xinghua Village is an old stockade where an odd fellow takes in creatures that come to their senses. Go and see.');
-  if (!F.yelangDone) return L('野狼坡的狼群發了狂，劫了一支鏢隊。鏢頭據說還困在坡上的洞裡。去救人吧。', 'The wolves of Wolf Slope have gone mad and attacked a caravan. They say the escort is still trapped in the cave on the slope. Go and save him.');
-  if (!F.ch1Done) return L('鈴聲是從東北的鈴音寺傳來的。寺裡的和尚都逃了，取而代之的是一群搖鈴的怪人。過了落霞鎮往北，沿著山路上去。', 'The bell rings from the Bell Temple to the north-east. The monks have fled; strange men with bells have taken it. Go past Luoxia Town and up the mountain path.');
-  if (!F.wenJoined) return L('斷橋修好了。橋東是水鄉蘇河城，城裡茶樓有個只用對聯說話的書生，學問大得很，你們用得著他。', 'The bridge is mended. East of it lies the canal city of Suhe; in a teahouse there is a scholar who speaks only in couplets. You will want his learning.');
-  if (!F.sujiaDone) return L('蘇河城北邊的蘇家舊宅，夜夜有人奉茶，卻二十年沒住過活人。燈籠帶上。', 'In the old Su mansion north of Suhe someone pours tea every night, though no living soul has lived there for twenty years. Take a lantern.');
-  if (!F.biboDone) return L('碧波洞裡的江蛟也被鈴聲縛住了。水魄就在牠守著的潭底。碧波湖在蘇河城南邊。', 'The river jiao of Green Wave Cave is bell-bound too, and the Water Soul lies in the pool it guards, south of Suhe.');
-  if (!F.shipGot) return L('望月渡的船王欠柳閣主一個人情。拿下江蛟，河道太平了，他自然肯借船。', 'The Ship King of Wangyue Ferry owes Mistress Liu a favour. With the jiao calmed and the river safe, he will lend you a ship.');
-  if (!F.dulongDone) return L('有了船，往南走。南疆青竹寨的阿蠻聽得懂妖物說話，她說毒龍沼的妖物哭了一個月了。', 'With a ship, sail south. A-Man of the Green Bamboo village understands creatures; she says the beasts of Poison Dragon Marsh have been weeping for a month.');
-  if (!F.chiyanDone) return L('火魄在南疆東邊的赤焰窟，火山口下。焰口村的人會告訴你怎麼上去。', 'The Fire Soul is in the Red Flame Caves under the volcano in the east of the south. The people of Yankou will show you the way.');
-  if (!F.ch3Done) return L('兩魄到手，就該送到安全的地方……漁火島的客棧是個歇腳的好地方，先去那裡喘口氣。', 'With two souls in hand, they should go somewhere safe... The inn on Fishing-fire Isle is a good place to catch your breath first.');
-  if (!F.bingpoDone) return L('莫記得帶著兩魄往北去了。北雁關的鐵鍊已經放下，冰魄窟就在北地東邊。', 'Mo Jide has fled north with the two souls. The chain of Beiyan Pass is lowered; the Ice Soul Caves lie in the east of the north.');
-  if (!F.finalDone) return L('冰牆已化，萬妖峰就在眼前。這段書，就差最後一回了。', 'The ice wall has melted and the Peak of Ten Thousand Beasts stands before you. This tale lacks only its last chapter.');
-  return L('這段書，總算說完了。', 'This tale is finally told.');
-}

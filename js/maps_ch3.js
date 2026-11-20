@@ -1,6 +1,6 @@
 // Chapter 3 「南疆」 The Southlands (by ship): Fishing-fire Isle, Green Bamboo village, the Bamboo Sea, Poison Dragon
 // Marsh, Yankou and the Red Flame Caves. The chapter ends with the theft at the island inn.
-import { L, P, lines, chapter, freeBeasts, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=4';
+import { L, P, lines, chapter, freeBeasts, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=5';
 
 // the night at the inn of Fishing-fire Isle: Mo Jide's sleeping draught, and Tie Wusi
 async function innTheft(S) {
@@ -61,6 +61,8 @@ const yuhuo = {
     A: P('fisherman', async (S) => {
       if (S.flag('ch3Done')) return S.say('fisherman', L('那個大夫坐的船，帆是黑的，往北邊去了。', 'The doctor\'s ship had black sails. It went north.'));
       await lines(S, [['fisherman', '漁火島的魚湯，天下第一。……往西是南疆，青竹寨的苗人好客，就是說話聽不懂。', 'Fishing-fire Isle\'s fish soup is the best under heaven. ...West lies the southland. The Green Bamboo folk are friendly; you just can\'t understand a word.']]);
+      if (S.flag('dulongDone') && S.flag('chiyanDone')) return S.say('fisherman', L('兩魄都拿到了？那今晚就在我們島上的客棧歇著吧，掌櫃會給你們留房。', 'You have both souls? Then rest at our island inn tonight; the innkeeper will keep rooms for you.'));
+      await S.say('fisherman', L('船靠南疆的北岸最方便，往南走就是青竹寨。毒龍沼在寨子西邊，赤焰窟在焰口村東邊的火山。', 'Land on the north shore of the southlands; walk south and you reach Green Bamboo. Poison Dragon Marsh is west of the village; the Red Flame Caves are in the volcano east of Yankou.'));
     }),
   },
 };
@@ -107,14 +109,21 @@ const qingzhu = {
         S.set('amanMet');
         await lines(S, [['aman', '嗷嗚——咕嚕咕嚕，汪！', 'Awoo - gurgle gurgle, woof!'], ['yishuo', '哥，我懂！她說……她肚子餓了！', 'Brother, I get it! She says... she\'s hungry!']]);
         const pet = S.G.party.find((m) => m.kind === 'mon');
-        if (pet) { const R = await import('./rules.js?v=4'); const nm = R.nameOf(pet, 'zh'), ne = R.nameOf(pet, 'en'); await lines(S, [[null, nm + '豎起耳朵聽了一會兒，對你們低低叫了兩聲。', ne + ' pricks up its ears, listens, then gives two low cries.'], [null, '（牠好像在說：「毒龍沼的妖物在哭。牠們身上的鈴鐺，好痛。」）', '(It seems to say: "The creatures of the marsh are weeping. The bells on them hurt so much.")']]); }
+        if (pet) { const R = await import('./rules.js?v=5'); const nm = R.nameOf(pet, 'zh'), ne = R.nameOf(pet, 'en'); await lines(S, [[null, nm + '豎起耳朵聽了一會兒，對你們低低叫了兩聲。', ne + ' pricks up its ears, listens, then gives two low cries.'], [null, '（牠好像在說：「毒龍沼的妖物在哭。牠們身上的鈴鐺，好痛。」）', '(It seems to say: "The creatures of the marsh are weeping. The bells on them hurt so much.")']]); }
         else await S.say('oldman', L('阿蠻說，毒龍沼的妖物在哭，牠們身上的鈴鐺讓牠們很痛。毒龍沼在寨子西邊。', 'A-Man says the creatures of the marsh are weeping; the bells on them hurt. The marsh is west of the village.'));
         return S.say('yishuo', L('……原來不是餓了。', '...So she wasn\'t hungry.'));
       }
       await S.say('aman', L('嗚……（她指著西邊的沼澤。）', 'Ooh... (She points west, towards the marsh.)'));
     }),
-    C: P('oldman', async (S) => { await S.say('oldman', L('我是寨老。阿蠻從小在林子裡跟狼長大，聽得懂妖物說話，卻不太會說人話。', 'I am the village elder. A-Man grew up in the forest with wolves; she understands creatures, but hardly speaks our tongue.')); }),
-    B: P('dancer', async (S) => { await S.say('dancer', L('竹海裡住著一隻白猿和一隻九尾狐，誰也不敢進去。', 'A white ape and a nine-tailed fox live in the Bamboo Sea. No one dares go in.')); }),
+    C: P('oldman', async (S) => {
+      await S.say('oldman', L('我是寨老。阿蠻從小在林子裡跟狼長大，聽得懂妖物說話，卻不太會說人話。', 'I am the village elder. A-Man grew up in the forest with wolves; she understands creatures, but hardly speaks our tongue.'));
+      if (!S.flag('dulongDone')) await S.say('oldman', L('毒龍沼在寨子西邊，一直穿過那片沼澤地就到。沼裡毒霧重，多帶解毒草。', 'Poison Dragon Marsh is west of the village, straight across the marshland. The mist is thick with poison: bring plenty of antidotes.'));
+      else if (!S.flag('chiyanDone')) await S.say('oldman', L('焰口村在寨子東邊，順著大路走。赤焰窟就在村子東邊的火山裡。', 'Yankou is east of the village along the road. The Red Flame Caves are in the volcano east of it.'));
+    }),
+    B: P('dancer', async (S) => {
+      await S.say('dancer', L('竹海裡住著一隻白猿和一隻九尾狐，誰也不敢進去。', 'A white ape and a nine-tailed fox live in the Bamboo Sea. No one dares go in.'));
+      if (!S.flag('foxDone')) await S.say('dancer', L('竹海就在寨子西北，順著小路走。白猿蹲在外林的竹梢上，九尾狐在最深處。', 'The Bamboo Sea is north-west of the village along the little path. The ape sits atop the bamboo in the outer grove; the fox is in the deepest part.'));
+    }),
   },
 };
 
@@ -134,10 +143,11 @@ const zhulin1 = {
     'j,j,,,,,j,,,,j,j,,,,,,j,,j',
     'j,j,c,,,j,jj,j,jjjj,j,j,,j',
     'j,,,,,,,,,,,,,,,,,,,j,,,,j',
-    'jjjjjjjjjjj,,,jjjjjjjjjjjj',
+    'jjjjjjjjjj?,,,jjjjjjjjjjjj',
     '          j,,,j           ',
   ],
   start: [12, 13],
+  looks: { '10,12': L('苗文和漢字的木牌：「竹海。白猿居外林之西，靈狐居深林。去深林的路在東北角。」', 'A board in Miao and Chinese: "The Bamboo Sea. The white ape lives in the west of the outer grove, the spirit fox in the deep grove. The way to the deep grove is in the north-east corner."') },
   chests: [{ item: 'lingguo' }, { item: 'herb2' }],
   links: { 1: ['zhulin2', 1] },
   beasts: [{ id: 'g_ape', flag: 'apeDone', x: 6, y: 5, s: 'bx_ape', ask: L('白猿抱著一顆靈果，警惕地看著你們。要挑戰牠嗎？', 'The white ape clutches a spirit fruit and eyes you warily. Challenge it?'),
@@ -181,7 +191,7 @@ const dulong1 = {
     '###.#######.#######.##.###',
     '#c....;;...........;;....#',
     '#~~~~~~~~....~~~~~~~~~~~~#',
-    '############...###########',
+    '###########?...###########',
   ],
   start: [13, 12],
   chests: [{ item: 'antidote' }, { item: 'pd3' }],
@@ -242,7 +252,11 @@ const yankou = {
       await lines(S, [['man', '我是礦工。赤焰窟就在村子東邊的火山裡。洞口有熔岩，別踩上去。', 'I\'m a miner. The Red Flame Caves are in the volcano east of the village. There\'s lava at the mouth: don\'t step in it.'],
         ['man', '前幾天有個背劍的年輕人也上去了，說要比誰先拿到什麼「火魄」。', 'A young man with a sword on his back went up a few days ago, talking about being first to some "Fire Soul".']]);
     }),
-    B: P('oldwoman', async (S) => { await S.say('oldwoman', L('泡泡溫泉吧，什麼累都泡掉了。', 'Have a soak in the springs; it washes all your weariness away.')); }),
+    B: P('oldwoman', async (S) => {
+      await S.say('oldwoman', L('泡泡溫泉吧，什麼累都泡掉了。', 'Have a soak in the springs; it washes all your weariness away.'));
+      if (!S.flag('chiyanDone')) await S.say('oldwoman', L('我兒子是礦工。他說熔岩道正中間站著一個搖鈴的紅衣人，誰也過不去；往火山口的坑道在熔岩道的東南角。', 'My son is a miner. He says a man in red with a bell stands in the middle of the lava road and lets no one pass; the tunnel to the crater is in its south-east corner.'));
+      else if (!S.flag('ch3Done')) await S.say('oldwoman', L('累了吧？漁火島的客棧比我們這兒的溫泉還舒服喔。', 'Tired? The inn on Fishing-fire Isle is even more restful than our springs.'));
+    }),
   },
 };
 
@@ -260,9 +274,10 @@ const chiyan1 = {
     '#c..#.#.......#.....aa.#',
     '#.###.#########.###.aa.#',
     '#.....aaa.......#c.....#',
-    '#########...############',
+    '########?...############',
   ],
   start: [10, 10],
+  looks: { '8,10': L('礦工的告示：「赤焰窟三層。上行的坑道在西北角，熔岩道的出口在東南角，火山口在最上。熔岩勿踏！」', 'A miners\' notice: "Three levels. The way up is the north-west tunnel; the lava road exits in the south-east; the crater is at the top. DO NOT step in the lava!"') },
   chests: [{ item: 'emberstone' }, { item: 'herb2' }],
   links: { 1: ['chiyan2', 1] },
   boss: { id: 'chu3', flag: 'chu3Done', s: 'chutiankuo', scene: 'volcano',
@@ -323,5 +338,7 @@ const chiyan3 = {
     post: [[null, L('鈴鏈熔斷了。火鴉振翅飛向天空，灑下一團不燙手的火焰。', 'The bell chains melt. The crow spreads its wings and soars, letting fall a flame that does not burn.')]],
     postFn: async (S) => { await lines(S, [['wudadan', '兩魄都到手了！……我們找個安全的地方歇一歇吧？漁火島的客棧不錯。', 'Two souls in hand! ...Shall we rest somewhere safe? The inn on Fishing-fire Isle is nice.']]); } },
 };
+
+dulong1.looks['11,12'] = L('青竹寨的木牌：「毒龍沼兩層。往龍潭的路在東北角。毒霧傷人，解毒草多帶。」', 'A Green Bamboo board: "The marsh has two levels. The way to the dragon pool is in the north-east corner. The mist is poison: bring antidotes."');
 
 export const CH3 = { yuhuo, qingzhu, zhulin1, zhulin2, dulong1, dulong2, yankou, chiyan1, chiyan2, chiyan3 };

@@ -98,6 +98,16 @@ brother; and the fortune-teller who is always wrong is right exactly once.
 - Gates: the Broken Bridge, the ship (sail the seas, land on any shore), the harbour chain of Beiyan Pass, the ice wall.
 - Save with 白先生, at any inn, or anywhere from the menu; autosave on pagehide and every 30 s.
 
+**Hints, so nobody gets stuck**
+- 線索 (Clues) in the field menu shows the current objective in a line or two, worked out from the story flags (old
+  records know it too); 更多提示 (More detail) adds where to go, what to bring, dungeon layouts and optional places.
+  白先生 tells the same next step.
+- Townsfolk talk about the current goal and change with the story. The recurring cast hint in character: 胡半仙's
+  prophecies are always backwards (flip them; 奕碩 often does it for you), 霍天下 brags about the deed you are about to
+  do and so names the place, and 賈八方 throws in news with his wares.
+- Signposts stand at the forks of the world map (walk into one or face it to read it); every dungeon has a board or
+  stele at its entrance about its stairs and dangers.
+
 **Controls**: arrows/WASD, Z/Enter/Space = A, X/Esc/Backspace = B; gamepads; on touch screens a d-pad and A/B beside
 the picture in landscape and under it in portrait. iPhone/iPad: safe areas, `100dvh`, audio unlocked on the first
 tap, `navigator.audioSession`, AAC music.
@@ -115,7 +125,8 @@ maps or lights, one post pass; no map drawing behind menus or still message boxe
     menus, shops, inns, saves; `battle.js` party battles; `rules.js` the shared rules; `data.js` people, arts, items,
     foes, species, formations; `story.js` the opening, the finale and the epilogue
   - `maps.js` + `maps_base.js` + `maps_ch1.js` ... `maps_ch4.js` the places and their people; `story_lines.js` the
-    recurring characters' lines; `world_map.js` (generated)
+    recurring characters' lines; `hints.js` the story stage and objective (Clues, Mr Bai, townsfolk), 胡半仙's
+    backwards prophecies and the world map's signposts; `world_map.js` (generated)
   - `view.js`, `tiles.js`, `paper.js` the pop-up book; `doll.js` the paper doll; `ui.js`, `input.js`, `audio.js`
 - `tools/` (Python 3 + Pillow, numpy, scipy, ffmpeg): `world.py` (the world and its zones, with a reachability check
   per story stage), `gallery.py` (foe art from the Character Gallery), `people.py` (people from the gallery),
