@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Longmen Quest II (龍門刀客傳 貳) - original chiptune soundtrack, rendered from code.
+Longmen Quest II (龍門刀客傳 貳) - the original score (every melody, bass line, chord and drum pattern).
 
-Synth: a small 2A03-like model - two pulse channels (12.5/25/50 % duty, 4-bit volume
+The game's music is rendered from this score by tools/orch.py with recorded instruments. Running this file
+only renders a quick sketch with the old built-in chip synth, into ../audio/_sketch (the game never uses it).
+
+Sketch synth: a small 2A03-like model - two pulse channels (12.5/25/50 % duty, 4-bit volume
 envelopes, NES period-quantised pitch), a 4-bit stepped 32-step triangle for bass, and a
 15-bit LFSR noise channel (long + short "metallic" mode) for drums, gongs and woodblocks.
 Ornaments give the wuxia flavour: grace notes, erhu-style slides and vibrato, falls.
@@ -17,7 +20,7 @@ Score format (one string per channel, tokens separated by spaces):
 Drum strings: one character per 16th step: k kick  s snare  h hat  o open hat  c crash
   g gong  w woodblock high  v woodblock low  t tom  .  rest   (| and spaces ignored)
 
-Run:  python tools/music.py            (renders every track into ../audio)
+Run:  python tools/music.py            (sketches every track into ../audio/_sketch)
       python tools/music.py battle     (just one)
 """
 import json
@@ -32,7 +35,7 @@ from scipy.signal import butter, sosfilt
 SR = 32000
 CPU = 1789773.0
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.normpath(os.path.join(HERE, '..', 'audio'))
+OUT = os.path.normpath(os.path.join(HERE, '..', 'audio', '_sketch'))
 TMP = os.environ.get('LQ_MUSIC_TMP', os.path.join(OUT, '_wav'))
 
 NOTE_PC = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}

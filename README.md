@@ -5,7 +5,8 @@ the 8-bit and 16-bit console RPGs that let monsters join your party. It is a sid
 
 - The same pop-up book as the first game (three.js): the world is an open book on a wooden table; trees, houses,
   people and beasts are die-cut cards that fold up as you come near; map changes turn the page; menus are paper notes.
-- Famicom-style 8-bit art in NES (2C02) colours, an original NES-synth score, bilingual (繁體中文 / English).
+- Famicom-style 8-bit art in NES (2C02) colours, an original score played by recorded instruments (strings, horns,
+  erhu, dizi, guzheng, harp, taiko, gongs), bilingual (繁體中文 / English).
 - Up to four fight together: 奕叡, the companions who join through the story, and monsters that ask to come along.
 
 Play: https://ywchen0711.github.io/longmen-quest-2/
@@ -118,7 +119,9 @@ maps or lights, one post pass; no map drawing behind menus or still message boxe
   - `view.js`, `tiles.js`, `paper.js` the pop-up book; `doll.js` the paper doll; `ui.js`, `input.js`, `audio.js`
 - `tools/` (Python 3 + Pillow, numpy, scipy, ffmpeg): `world.py` (the world and its zones, with a reachability check
   per story stage), `gallery.py` (foe art from the Character Gallery), `people.py` (people from the gallery),
-  `doll.py`, `music.py` (the score).
+  `doll.py`, `music.py` (the score: every melody, bass line, chord and drum pattern), `orch.py` (plays the score
+  with recorded instrument samples, adds pads and percussion, reverb and mastering; `orch_sources.json` lists the
+  free samples it uses).
 
 All new people and creatures were drawn for the Character Gallery (`C:\CharacterGallery`, `nes` style, groups
 `longmen2` and `longmen2Foes`) and are pulled in by the tools.

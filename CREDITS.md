@@ -17,8 +17,9 @@ text or interface art.
 - **The pop-up book:** drawn in code (`js/paper.js`, `js/view.js`, `style.css`).
 
 ## Music and sound (original)
-- **Soundtrack:** composed for this game and rendered by the NES-style synth in `tools/music.py` (two pulse
-  channels, a triangle and noise):
+- **Soundtrack:** composed for this game (the score is `tools/music.py`) and played by recorded instruments with the
+  game's own sampler and mixer, `tools/orch.py` (arrangement, added pads and percussion, reverb and mastering made
+  for this game; the instrument samples are listed under Third-party):
   萬妖鈴 · The Bell of Ten Thousand Beasts; 市井 · Market Streets; 水鄉茶館 · A Teahouse in the Water Country;
   北雁關 · Beiyan Pass; 杏花炊煙 · Cookfire Smoke among the Apricot Blossoms; 百獸山寨 · The Hundred Beasts Camp;
   江湖再行 · Back on the Road of the Jianghu; 破浪 · Breaking the Waves; 幽洞 · Hollow Dark; 鈴音寺 · The Bell Temple;
@@ -29,6 +30,27 @@ text or interface art.
 - **Sound effects:** synthesised in the browser with Web Audio.
 
 ## Third-party
+- **Instrument samples for the soundtrack** (every file is listed in `tools/orch_sources.json`). All are
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); they are credited here
+  with thanks, not because the licence asks for it. Changes made: notes cut, trimmed, retuned, level-matched,
+  pitch-shifted and mixed into the rendered music.
+  - **VS Chamber Orchestra: Community Edition (VSCO-2 CE)** by Versilian Studios (recorded by Sam Gossner and Simon
+    Dalzell, sample cutting by Elan Hickler / Soundemote): violin, viola, cello and contrabass sections (sustain,
+    spiccato, pizzicato, tremolo), harp, flute, bassoon, French horn, tenor trombone, glockenspiel, timpani, bass
+    drum, snare and tenor drums, large ethnic drum, clash and suspended cymbals, tam-tam (gong), slit drum, claves,
+    shaker, tambourine, finger cymbal, wind chimes and Nepalese bells. https://github.com/sgossner/VSCO-2-CE
+  - **Erhu:** "Chinese Erhu" pack by tarane468 (freesound.org). https://freesound.org/people/tarane468/packs/26451/
+  - **Dizi:** "Flute Dizi C all notes + pitched semitones" pack by Hypnotriod (freesound.org).
+    https://freesound.org/people/Hypnotriod/packs/21613/
+  - **Guzheng:** "LOVELY CHINESE GUZHENG PLUCKED.wav" by Pufermufin (freesound.org); single plucked notes were cut
+    from it. https://freesound.org/people/Pufermufin/sounds/396868/
+  - **Muyu:** "Mokugyo.wav" by jonopodmore. https://freesound.org/people/jonopodmore/sounds/607215/
+  - **Temple blocks:** "Temple Blocks (5pcs) - Hard Wood Mallets" by sazanami12.
+    https://freesound.org/people/sazanami12/sounds/863784/
+  - **Opera cymbal:** "cymbal splash hit nearby chinese opera in park" by kyles.
+    https://freesound.org/people/kyles/sounds/452400/
+  - **Taiko:** "taiko.wav" and "taiko2.wav" by Anuj_Shrestha1.
+    https://freesound.org/people/Anuj_Shrestha1/sounds/486140/ and https://freesound.org/people/Anuj_Shrestha1/sounds/486141/
 - **Cubic 11 (俐方體11號)** by ACh-K and contributors, SIL Open Font License 1.1 (`fonts/Cubic_11-LICENSE.txt`). It
   includes glyphs from JF Dot M+H 12 and the M+ bitmap fonts.
 - **three.js r160** and its post-processing examples (EffectComposer, RenderPass, ShaderPass, OutputPass),

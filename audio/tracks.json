@@ -99,48 +99,48 @@
   "zh": "江湖又一年",
   "en": "Another Year in the Jianghu",
   "loop": false,
-  "dur": 73.21
+  "dur": 76.497
  },
  "j_win": {
   "zh": "旗開得勝",
   "en": "Victory at the First Banner",
   "loop": false,
-  "dur": 3.082
+  "dur": 4.8
  },
  "j_level": {
   "zh": "功力精進",
   "en": "Inner Strength Grows",
   "loop": false,
-  "dur": 2.181
+  "dur": 3.85
  },
  "j_inn": {
   "zh": "一夜好眠",
   "en": "A Night's Good Rest",
   "loop": false,
-  "dur": 5.117
+  "dur": 5.6
  },
  "j_item": {
   "zh": "神兵到手",
   "en": "A Treasure in Hand",
   "loop": false,
-  "dur": 3.339
+  "dur": 5.029
  },
  "j_over": {
   "zh": "壯志未酬",
   "en": "Ambition Unfulfilled",
   "loop": false,
-  "dur": 5.021
+  "dur": 5.886
  },
  "j_save": {
   "zh": "說書記事",
   "en": "The Storyteller Writes It Down",
   "loop": false,
-  "dur": 2.184
+  "dur": 3.637
  },
  "j_join": {
   "zh": "新夥伴",
   "en": "A New Friend",
   "loop": false,
-  "dur": 2.75
+  "dur": 4.0
  }
 }
