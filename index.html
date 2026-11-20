@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#3a2414">
+<title>龍門刀客傳 貳 Longmen Quest II</title>
+<meta name="description" content="An original 8-bit wuxia party RPG in a pop-up storybook: the sequel to Longmen Quest, with creatures that join you.">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css?v=1">
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app">
+  <div id="dpad" class="padpart" aria-label="d-pad"><i class="u"></i><i class="d"></i><i class="l"></i><i class="r"></i></div>
+  <div id="screen">
+    <canvas id="view"></canvas>
+    <div id="battle" class="hidden"></div>
+    <div id="title">
+      <div class="book">
+        <div class="pages"></div>
+        <div class="cover">
+          <div class="cfront"><div class="cframe">
+            <div id="tname">龍門刀客傳</div><div id="tnum">貳</div><div id="tsub">萬妖鈴</div>
+            <div class="cemb"><img id="temb" alt=""></div>
+          </div></div>
+          <div class="cback"></div>
+        </div>
+      </div>
+      <div id="tpress"></div>
+    </div>
+    <div id="ending" class="hidden"></div>
+    <div id="ui"></div>
+    <div id="loading">龍門刀客傳 貳 …</div>
+  </div>
+  <div id="btns" class="padpart"><div id="btnB">B</div><div id="btnA">A</div></div>
+</div>
+<div id="pad" hidden></div>
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>

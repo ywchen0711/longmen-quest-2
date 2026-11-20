@@ -1,0 +1,140 @@
+{
+ "title": {
+  "zh": "萬妖鈴",
+  "en": "The Bell of Ten Thousand Beasts",
+  "loop": true,
+  "dur": 34.286
+ },
+ "town": {
+  "zh": "市井",
+  "en": "Market Streets",
+  "loop": true,
+  "dur": 30.476
+ },
+ "town2": {
+  "zh": "水鄉茶館",
+  "en": "A Teahouse in the Water Country",
+  "loop": true,
+  "dur": 20.0
+ },
+ "town3": {
+  "zh": "北雁關",
+  "en": "Beiyan Pass",
+  "loop": true,
+  "dur": 19.2
+ },
+ "village": {
+  "zh": "杏花炊煙",
+  "en": "Cookfire Smoke among the Apricot Blossoms",
+  "loop": true,
+  "dur": 18.462
+ },
+ "camp": {
+  "zh": "百獸山寨",
+  "en": "The Hundred Beasts Camp",
+  "loop": true,
+  "dur": 16.0
+ },
+ "field": {
+  "zh": "江湖再行",
+  "en": "Back on the Road of the Jianghu",
+  "loop": true,
+  "dur": 35.556
+ },
+ "sea": {
+  "zh": "破浪",
+  "en": "Breaking the Waves",
+  "loop": true,
+  "dur": 17.143
+ },
+ "dungeon": {
+  "zh": "幽洞",
+  "en": "Hollow Dark",
+  "loop": true,
+  "dur": 22.326
+ },
+ "temple": {
+  "zh": "鈴音寺",
+  "en": "The Bell Temple",
+  "loop": true,
+  "dur": 27.429
+ },
+ "mansion": {
+  "zh": "舊宅幽魂",
+  "en": "The Ghost of the Old Mansion",
+  "loop": true,
+  "dur": 24.615
+ },
+ "tower": {
+  "zh": "萬妖塔",
+  "en": "The Tower of Ten Thousand Beasts",
+  "loop": true,
+  "dur": 20.87
+ },
+ "battle": {
+  "zh": "群戰",
+  "en": "Many Against Many",
+  "loop": true,
+  "dur": 22.588
+ },
+ "boss": {
+  "zh": "宗門魔影",
+  "en": "Shadows of the Sect",
+  "loop": true,
+  "dur": 22.4
+ },
+ "final": {
+  "zh": "鈴心決戰",
+  "en": "Battle at the Heart of the Bell",
+  "loop": true,
+  "dur": 24.545
+ },
+ "ending": {
+  "zh": "江湖又一年",
+  "en": "Another Year in the Jianghu",
+  "loop": false,
+  "dur": 73.21
+ },
+ "j_win": {
+  "zh": "旗開得勝",
+  "en": "Victory at the First Banner",
+  "loop": false,
+  "dur": 3.082
+ },
+ "j_level": {
+  "zh": "功力精進",
+  "en": "Inner Strength Grows",
+  "loop": false,
+  "dur": 2.181
+ },
+ "j_inn": {
+  "zh": "一夜好眠",
+  "en": "A Night's Good Rest",
+  "loop": false,
+  "dur": 5.117
+ },
+ "j_item": {
+  "zh": "神兵到手",
+  "en": "A Treasure in Hand",
+  "loop": false,
+  "dur": 3.339
+ },
+ "j_over": {
+  "zh": "壯志未酬",
+  "en": "Ambition Unfulfilled",
+  "loop": false,
+  "dur": 5.021
+ },
+ "j_save": {
+  "zh": "說書記事",
+  "en": "The Storyteller Writes It Down",
+  "loop": false,
+  "dur": 2.184
+ },
+ "j_join": {
+  "zh": "新夥伴",
+  "en": "A New Friend",
+  "loop": false,
+  "dur": 2.75
+ }
+}

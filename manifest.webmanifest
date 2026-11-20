@@ -1,0 +1,13 @@
+{
+  "name": "龍門刀客傳 貳 Longmen Quest II",
+  "short_name": "龍門刀客傳貳",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#3a2414",
+  "theme_color": "#3a2414",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
