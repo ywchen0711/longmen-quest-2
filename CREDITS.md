@@ -23,7 +23,8 @@ text or interface art.
   北雁關 · Beiyan Pass; 杏花炊煙 · Cookfire Smoke among the Apricot Blossoms; 百獸山寨 · The Hundred Beasts Camp;
   江湖再行 · Back on the Road of the Jianghu; 破浪 · Breaking the Waves; 幽洞 · Hollow Dark; 鈴音寺 · The Bell Temple;
   舊宅幽魂 · The Ghost of the Old Mansion; 萬妖塔 · The Tower of Ten Thousand Beasts; 群戰 · Many Against Many;
-  宗門魔影 · Shadows of the Sect; 鈴心決戰 · Battle at the Heart of the Bell; 江湖又一年 · Another Year in the Jianghu;
+  宗門魔影 · Shadows of the Sect; 鈴心決戰 · Battle at the Heart of the Bell;
+  萬妖亂舞 · Riot of Ten Thousand Beasts (the last battle, an original war-drum piece); 江湖又一年 · Another Year in the Jianghu;
   and seven jingles (including 新夥伴 · A New Friend).
 - **Sound effects:** synthesised in the browser with Web Audio.
 

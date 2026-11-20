@@ -69,7 +69,7 @@ export async function chapter(S, n, zh, en) {
 }
 // a few free beasts follow you home to the camp (story rewards)
 export async function freeBeasts(S, ids) {
-  const G = S.G, R = await import('./rules.js?v=1'), { ENEMIES } = await import('./data.js?v=1');
+  const G = S.G, R = await import('./rules.js?v=2'), { ENEMIES } = await import('./data.js?v=2');
   const names = [];
   for (const id of ids) { const m = R.newMember(id, ENEMIES[id].lv); G.camp.push(m); names.push(ENEMIES[id].zh); G.stats.recruited[id] = (G.stats.recruited[id] || 0) + 1; }
   await G.audio.jingle('j_join');
@@ -77,7 +77,7 @@ export async function freeBeasts(S, ids) {
 }
 
 // ---------------------------------------------------------------- recurring characters, shared by every chapter
-import { HU_LINES, HUO_LINES, JIA_LINES } from './story_lines.js?v=1';
+import { HU_LINES, HUO_LINES, JIA_LINES } from './story_lines.js?v=2';
 const chap = (G) => (G.flags.ch3Done ? 4 : G.flags.shipGot ? 3 : G.flags.ch1Done ? 2 : 1);
 // 胡半仙 the fortune-teller: every prophecy is the opposite of what happens
 export async function huPredict(S) { const k = chap(S.G); await lines(S, HU_LINES[k]); }

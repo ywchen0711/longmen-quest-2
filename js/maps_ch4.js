@@ -1,6 +1,6 @@
 // Chapter 4 「萬妖峰」 The Peak of Ten Thousand Beasts: Beiyan Pass, the Snow Wolf camp, the Ice Soul Caves and the
 // Tower of Ten Thousand Beasts. The last fight starts the ending (story.js).
-import { L, P, lines, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=1';
+import { L, P, lines, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=2';
 
 // ================================================================= 北雁關 Beiyan Pass (the harbour fortress)
 const beiyan = {
@@ -128,7 +128,7 @@ const bingpo3 = {
   ],
   chests: [{ item: 'w13' }, { item: 'qipill' }],
   links: { 2: ['bingpo2', 2] },
-  boss: { id: 'b_mojide', flag: 'bingpoDone', s: 'mojide',
+  boss: { id: 'b_mojide', flag: 'bingpoDone', music: 'final', s: 'mojide',
     pre: [['mojide', L('喲，你們還真追來了。我還以為那碗安神湯，夠你們睡上三天。', 'Oh, you actually followed me. I thought that soup would keep you asleep three days.')],
           ['mojide', L('冰魄我已經拿到手了。三魄齊了，宗主的鈴，就要響了。', 'I have the Ice Soul. All three are together; the master\'s bell is about to ring.')],
           ['suxiaowan', L('你為什麼要幫他？', 'Why do you help him?')],
@@ -186,7 +186,7 @@ const wanyao3 = T(L('萬妖塔・三層', 'Tower: Third Storey'), [
   '#...#....###....#...#',
   '#####################',
 ], { enc: 'tower2', chests: [{ item: 'p5' }, { item: 'qipill' }], links: { 2: ['wanyao2', 2], 3: ['wanyao4', 3] },
-  boss: { id: 'b_lion', flag: 'lionDone', art: 'bx_lion',
+  boss: { id: 'b_lion', flag: 'lionDone', music: 'final', art: 'bx_lion',
     pre: [[null, L('一頭石獅蹲在樓梯口，脖子上掛著一口銅鈴，石眼裡燃著紅光。', 'A stone lion crouches at the stairway, a brass bell at its neck and red fire in its stone eyes.')]],
     post: [[null, L('石獅的鈴碎了。牠緩緩趴下，又變回一尊普通的石像，口中銜著一頂頭盔。', 'The lion\'s bell shatters. It lies down slowly and becomes a plain statue again, a helm held in its mouth.')]],
     give: 'hd_lion' } });
@@ -213,12 +213,12 @@ const wanyao5 = T(L('萬妖塔・鈴心殿', 'Tower: Hall of the Bell\'s Heart')
   '#.......mmm.....4.#',
   '###################',
 ], { enc: null, music: 'tower', links: { 4: ['wanyao4', 4] },
-  boss: { id: 'b_mowuya', flag: 'finalDone', s: 'mowuya', music: 'final',
+  boss: { id: 'b_mowuya', flag: 'finalDone', s: 'mowuya', music: 'beasts',
     preFn: async (S) => {
-      const story = await import('./story.js?v=1'); await story.finalPre(S);
+      const story = await import('./story.js?v=2'); await story.finalPre(S);
     },
     postFn: async (S) => {
-      const story = await import('./story.js?v=1'); await story.finalPost(S);
+      const story = await import('./story.js?v=2'); await story.finalPost(S);
     } } });
 
 export const CH4 = { beiyan, xuelang, bingpo1, bingpo2, bingpo3, wanyao1, wanyao2, wanyao3, wanyao4, wanyao5 };

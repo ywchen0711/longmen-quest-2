@@ -1,5 +1,5 @@
 // Chapter 2 「水鄉」 The Water Country: Suhe City, the old Su mansion, Green Wave Cave and Wangyue Ferry.
-import { L, P, lines, chapter, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=1';
+import { L, P, lines, chapter, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=2';
 
 // 文對仗's couplet contest: he gives the first line, you choose the second
 const COUPLETS = [
@@ -265,7 +265,7 @@ const bibo3 = {
   ],
   chests: [{ item: 'c_jiao' }, { item: 'pearl' }],
   links: { 2: ['bibo2', 2] },
-  boss: { id: 'b_jiao', flag: 'biboDone', art: 'bx_jiao', give: 'shuipo',
+  boss: { id: 'b_jiao', flag: 'biboDone', music: 'final', art: 'bx_jiao', give: 'shuipo',
     pre: [[null, L('深潭中央浮起一條青鱗巨蛟，額上釘著一只銅鈴，鈴聲在洞裡迴盪。', 'A huge blue-scaled jiao rises from the pool, a brass bell nailed to its brow, its peal echoing through the cave.')],
           ['wenduizhang', L('蛟龍本是江中客，鈴響何曾得自由！', 'The jiao should roam the river wide; with that bell, it has no freedom left inside!')]],
     post: [[null, L('銅鈴碎裂，江蛟長吟一聲，沉回潭底。潭水退開，露出一滴懸在半空、不肯落下的水珠。', 'The bell breaks. The jiao gives a long cry and sinks to the depths. The water draws back from a single drop hanging in the air, refusing to fall.')]],

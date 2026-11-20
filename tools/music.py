@@ -329,6 +329,18 @@ def drum(c):
         x += np.where(ph % 1 < 0.25, 1, -1) * q4(np.exp(-np.arange(n) / (0.9 * SR))) * 0.12
         x[:int(0.02 * SR)] += noise(int(0.02 * SR), 3) * 0.4
         return x
+    if c == 'T':                          # taiko: a deep, long triangle drop + a low noise thump
+        a = tri_sweep(115, 34, 0.36)
+        n = len(a)
+        x = a * dec(n, 0.17) * 1.35
+        x += noise(n, 12) * dec(n, 0.035) * 0.5
+        x[:int(0.012 * SR)] += noise(int(0.012 * SR), 4) * 0.45
+        return x
+    if c == 'R':                          # rim shot: a tight metallic click
+        n = int(0.05 * SR)
+        x = noise(n, 2, True) * dec(n, 0.011) * 0.5
+        x[:int(0.01 * SR)] += tri_sweep(900, 600, 0.01) * 0.35
+        return x
     if c in 'wv':                         # woodblock / muyu: a short hollow pulse blip
         f = 1250.0 if c == 'w' else 820.0
         n = int(0.06 * SR)
@@ -638,6 +650,144 @@ T['final'] = dict(loop=True, sections=[dict(bpm=176, transpose=2, p1=_fn, p1o=di
     p2=arp_line(_fn_ch, 'roll16', 2, lo=55), p2o=dict(duty=0.125, vol=0.7), tri=bass_line(_fn_ch, 'drive', 2),
     noise=D('k.s.k.s.k.s.k.ss', 'k.s.k.s.k.s.ssss', *(['c.hsk.hsk.hsk.hs', 'k.hsk.hsk.hsk.hs', 'k.hsk.hsk.hsk.hs', 'k.hsk.hsk.s.ssss'] * 4)))])
 
+# ---- beasts 「萬妖亂舞」: Mo Wuya and the great bell at the top of the tower. An original war-drum piece: a
+# relentless triangle ostinato that steps E -> F -> D -> C, taiko hits, layers entering one by one, an E yu theme that
+# climbs a whole step (F# yu) for the climax. 72 bars at 160 bpm (108 s) in one seamless loop:
+#   1-8 drums + ostinato | 9-16 build: calls and answers | 17-32 main theme | 33-40 breakdown (half-time drums)
+#   41-56 climax: the theme a step higher, harmonised | 57-64 the soaring tag | 65-72 the bell motif, drum roll home
+_PCN = {'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11}
+_NOTE_TOK = re.compile(r'^([\^/\\~!*]*)([A-G][#b]?-?\d)(:[\d.]+)?$')
+
+
+def _map_notes(s, fn):
+    out = []
+    for tok in s.split():
+        m = _NOTE_TOK.match(tok)
+        if not m:
+            out.append(tok)
+            continue
+        r = fn(midi_of(m.group(2)), m.group(1))
+        if r is None:
+            out.append('r' + (m.group(3) or ''))
+        else:
+            mm, orn = r
+            out.append(orn + nn(mm) + (m.group(3) or ''))
+    return ' '.join(out)
+
+
+def shift(s, semi):
+    return _map_notes(s, lambda m, o: (m + semi, o))
+
+
+def harm(s, scale, deg=-2, drop=0):
+    """a diatonic line `deg` scale steps from the melody (a third below by default); accents removed"""
+    sc = sorted(_PCN[x] for x in scale)
+    def f(m, o):
+        pc = m % 12
+        if pc not in sc:
+            return (m - 3 - drop, o.replace('!', ''))
+        i = sc.index(pc)
+        j = i + deg
+        octs, j = divmod(j, len(sc))
+        return (m - pc + sc[j] + 12 * octs - drop, o.replace('!', '').replace('~', ''))
+    return _map_notes(s, f)
+
+
+_OST = {  # (interval, dur) figures for the triangle: A the steady one, B the turn at the end of a phrase
+    'A': [(0, 2), (0, 1), (0, 1), (12, 2), (0, 2), (3, 2), (0, 1), (0, 1), (5, 2), (3, 2)],
+    'B': [(0, 2), (0, 1), (0, 1), (12, 2), (0, 2), (7, 2), (5, 2), (3, 2), (-2, 2)],
+    'C': [(0, 1), (0, 1), (12, 1), (0, 1), (0, 1), (0, 1), (10, 1), (0, 1),
+          (0, 1), (0, 1), (7, 1), (0, 1), (5, 1), (0, 1), (3, 1), (12, 1)],    # 16ths: the climax drive
+}
+
+
+def ostinato(spec, lo=36):
+    """spec 'E E F E/B ...' -> a triangle line, one bar per root (/X picks the figure)"""
+    out = []
+    for b in spec.split():
+        root, fig = (b.split('/') + ['A'])[:2]
+        R = place(_PCN[root], lo, 0)
+        out += [nn(R + iv) + ':' + str(d) for iv, d in _OST[fig]] + ['|']
+    return ' '.join(out)
+
+
+_STAB = {  # R root, F fifth, O octave
+    'a': 'R:1 r:1 r:2 O:1 r:1 F:1 r:1 r:2 R:1 r:1 O:2 F:2',
+    'b': 'r:2 R:1 R:1 r:2 F:2 r:2 O:1 O:1 r:2 F:2',
+    'c': 'O:1 r:1 F:1 r:1 R:1 r:1 F:1 r:1 O:1 r:1 F:1 r:1 R:2 F:2',
+    'p': 'O:1 R:1 R:1 R:1 F:1 R:1 R:1 R:1 O:1 R:1 R:1 R:1 F:1 R:1 F:1 O:1',   # 16th pulse
+    'x': 'r:16',
+}
+
+
+def stabs(spec, lo=52):
+    out = []
+    for b in spec.split():
+        root, pat = (b.split('/') + ['a'])[:2]
+        R = place(_PCN[root], lo, 0)
+        tones = {'R': R, 'F': R + 7, 'O': R + 12}
+        for tok in _STAB[pat].split():
+            k, d = tok.split(':')
+            out.append('r:' + d if k == 'r' else nn(tones[k]) + ':' + d)
+        out.append('|')
+    return ' '.join(out)
+
+
+_EYU = ['E', 'F#', 'G', 'A', 'B', 'C', 'D']           # E aeolian for the harmony
+_FYU = ['F#', 'G#', 'A', 'B', 'C#', 'D', 'E']
+
+_bm_main = '''
+!E5:6 G5:2 A5:4 B5:4 | D6:4 B5:4 A5:2 G5:2 E5:4 | !G5:6 A5:2 C6:4 B5:4 | A5:4 G5:2 A5:2 /D5:8 |
+!E5:6 G5:2 A5:4 B5:4 | E6:4 D6:4 B5:2 D6:2 E6:4 | !G6:6 E6:2 D6:4 B5:4 | ~A5:12 r:4 |
+!C6:3 B5:3 A5:2 G5:3 A5:3 B5:2 | E5:4 G5:4 A5:8 | !D6:3 C6:3 B5:2 A5:3 B5:3 D6:2 | E6:12 D6:2 B5:2 |
+!E6:4 B5:4 D6:4 A5:4 | B5:2 A5:2 G5:2 E5:2 G5:4 A5:4 | !F5:6 E5:2 F5:2 G5:2 A5:4 | ~E5:12 r:4 |'''
+_bm_p1 = ' '.join([
+    'r:16 |' * 8,                                                            # 1-8 drums + ostinato
+    '!E5:6 r:2 G5:2 A5:2 r:4 | r:16 | !D5:6 r:2 E5:2 G5:2 r:4 | r:16 |',     # 9-12 calls
+    '!E5:4 G5:4 A5:4 B5:4 | D6:6 B5:2 A5:8 | G5:2 A5:2 B5:2 D6:2 E6:4 D6:4 | ~B5:12 r:4 |',
+    _bm_main,                                                                # 17-32 main theme
+    'r:16 | r:16 | r:16 | r:16 |',                                           # 33-36 breakdown
+    '~E5:16 | ~F5:16 | ~G5:16 | B5:8 !D6:8 |',                               # 37-40 rising
+    shift(_bm_main, 2),                                                      # 41-56 climax in F#
+    '''!A6:6 F#6:2 E6:4 C#6:4 | E6:4 F#6:4 ~B5:8 | !D6:6 E6:2 F#6:4 A6:4 | E6:6 C#6:2 B5:4 C#6:4 |
+       !F#6:4 A6:4 F#6:2 E6:2 C#6:4 | E6:4 F#6:2 E6:2 C#6:4 B5:4 | !A5:3 B5:3 C#6:2 E6:3 F#6:3 A6:2 | ~F#6:16 |''',
+    '!E5:4 A5:4 E5:8 | !F5:4 Bb5:4 F5:8 | !E5:4 A5:4 E5:8 | ~B4:16 |',       # 65-68 the bell motif
+    'r:16 | r:16 | r:16 | r:16 |'])
+_bm_p2 = ' '.join([
+    'r:16 |' * 4, stabs('E/b F/b E/b E/c'),                                   # 5-8 stabs enter
+    stabs('E/b'), 'B4:2 A4:2 G4:2 E4:2 r:8 |', stabs('D/b'), 'A4:2 G4:2 E4:2 D4:2 r:8 |',  # 9-12 answers
+    stabs('E/a E/a G/a D/c'),
+    stabs('E/a E/a C/a D/a E/a E/a G/a D/c'),                                 # 17-24 stabs under the theme
+    harm(' | '.join(_bm_main.split('|')[8:16]) + ' |', _EYU),                # 25-32 harmony a third below
+    'r:16 | r:16 | r:16 | r:16 |', stabs('E/p E/p F/p F/p'),                 # 33-40 silence, then a 16th pulse
+    harm(shift(_bm_main, 2), _FYU),                                          # 41-56 harmony a third below
+    arp_line(['F#m', 'F#m', 'D', 'E', 'F#m', 'F#m', 'G', 'F#m'], 'up16', 0, lo=57),  # 57-64
+    stabs('E/a F/a E/a E/c E/b D/b E/x E/x', lo=52)])
+_bm_tri = ' '.join([
+    ostinato('E E E E/B F F E E/B'),                                         # 1-8
+    ostinato('E E D D C C D D/B'),                                           # 9-16
+    ostinato('E E C D E E G D C C D D E E F E/B'),                           # 17-32
+    'E2:6 r:2 E2:2 r:6 | E2:6 r:2 E2:2 r:6 | E2:6 r:2 F2:2 r:6 | F2:6 r:2 F2:2 r:6 |',
+    ostinato('E E F F/B'),                                                   # 37-40
+    ostinato('F#/C F#/C D/C E/C F#/C F#/C A/C E/C D/C D/C E/C E/C F#/C F#/C G/C F#/B'),   # 41-56
+    ostinato('F#/C F#/C D/C E/C F#/C F#/C G/C F#/B'),                        # 57-64
+    ostinato('E F E E/B E E D D/B')])                                        # 65-72
+_bm_dr = D(
+    'g.......T...R.R.', 'T.......T.T.R...', 'T.......T...R.R.', 'T.......T.T.R.RR',            # 1-4
+    'T...s...T.T.s.R.', 'T...s...T.T.s.R.', 'T...s...T.T.s.R.', 'T...s...ssssssss',            # 5-8
+    *(['T.h.s.h.T.hTs.h.', 'T.h.s.h.T.hTs.hh', 'T.h.s.h.T.hTs.h.', 'T.h.s.h.T.T.ssss'] * 1),    # 9-12
+    'T.h.s.h.T.hTs.h.', 'T.h.s.h.T.hTs.hh', 'T.h.s.h.T.hTs.h.', 'T...T...t.t.tttt',            # 13-16
+    *(['c.hks.hhk.hTs.hk', 'T.hks.hhk.hTs.hk', 'T.hks.hhk.hTs.hk', 'T.hks.hhk.s.ssss'] * 4),    # 17-32
+    'T.......R.......', 'T.....T.R.......', 'T.......R.......', 'T.....T.R...R...',            # 33-36 half-time
+    'T.......s.......', 'T...T...s.....s.', 'T.T.T.T.s...s...', 'T.T.s.s.ssssssss',            # 37-40
+    *(['c.hsk.hsT.hsk.hs', 'k.hsk.hsT.hsk.hs', 'T.hsk.hsT.hsk.hs', 'k.hsk.hsT.s.ssss'] * 4),    # 41-56
+    'c.hsT.hsk.hsT.hs', 'T.hsT.hsk.hsT.hs', 'T.hsT.hsk.hsT.hs', 'T.hsT.hsk.s.ssss',            # 57-60
+    'c.hsT.hsk.hsT.hs', 'T.hsT.hsk.hsT.hs', 'T.hsT.hsk.hsT.ss', 'T.T.T.ssT.ssssss',            # 61-64
+    'c.......T...R.R.', 'T.......T.T.R...', 'T.......T...R.R.', 'T...s...T.T.s.R.',            # 65-68
+    'T...T...s.s.s.s.', 'T...T...s.s.ssss', 'T.T.T.T.t.t.t.t.', 'T.T.T.T.ssssssss')            # 69-72
+T['beasts'] = dict(loop=True, sections=[dict(bpm=160, transpose=0, p1=_bm_p1, p1o=dict(duty=0.25, vib=20),
+    p2=_bm_p2, p2o=dict(duty=0.5, vol=0.72, kind='pluck'), tri=_bm_tri, noise=_bm_dr, nvol=0.95)])
+
 # ---- ending 「江湖又一年」: the title theme in triumph, then slow and gentle (no loop)
 _en_slow = '''
 A4:4 C5:2 D5:2 E5:4 A5:4 | G5:8 E5:8 | D5:4 E5:2 G5:2 A5:4 G5:4 | E5:16 |
@@ -686,6 +836,7 @@ NAMES = {
     'battle': ('群戰', 'Many Against Many'),
     'boss': ('宗門魔影', 'Shadows of the Sect'),
     'final': ('鈴心決戰', 'Battle at the Heart of the Bell'),
+    'beasts': ('萬妖亂舞', 'Riot of Ten Thousand Beasts'),
     'ending': ('江湖又一年', 'Another Year in the Jianghu'),
     'j_win': ('旗開得勝', 'Victory at the First Banner'),
     'j_level': ('功力精進', 'Inner Strength Grows'),

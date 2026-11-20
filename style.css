@@ -68,7 +68,7 @@ body { font-family: 'Cubic11', 'PingFang TC', 'Microsoft JhengHei', monospace; f
 .bookwin { left: 4%; top: 6%; bottom: 3%; width: 50%; z-index: 9; display: flex; flex-direction: column; gap: 0.4em; overflow: hidden; }
 .bkpic { flex: none; height: calc(66px * var(--pz)); display: flex; align-items: flex-end; justify-content: center; }
 .bkpic img { width: calc(48px * var(--pz)); height: calc(56px * var(--pz)); image-rendering: pixelated; border: calc(var(--bd) + 1px) solid #fffdf6; box-shadow: 2px 3px 4px rgba(40, 25, 10, 0.35); transform: rotate(2deg); }
-.bkspr { flex: none; background-image: url(assets/enemies.png?v=1); image-rendering: pixelated; transform: scale(var(--pz)); transform-origin: 50% 100%; filter: drop-shadow(1px 0 0 #fffdf6) drop-shadow(-1px 0 0 #fffdf6) drop-shadow(0 1px 0 #fffdf6) drop-shadow(0 -1px 0 #fffdf6); }
+.bkspr { flex: none; background-image: url(assets/enemies.png?v=2); image-rendering: pixelated; transform: scale(var(--pz)); transform-origin: 50% 100%; filter: drop-shadow(1px 0 0 #fffdf6) drop-shadow(-1px 0 0 #fffdf6) drop-shadow(0 1px 0 #fffdf6) drop-shadow(0 -1px 0 #fffdf6); }
 .bkname { color: var(--red); }
 .bkmeta { color: var(--sub); font-size: 0.85em; }
 .bkbio { margin: 0.2em 0; font-size: 0.9em; }

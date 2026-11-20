@@ -7,18 +7,18 @@
 // on the target's card (boxed by blinking corner marks), which flashes, recoils on its hinge and sheds paper scraps,
 // and the number pops up on a paper tag over the card that was hit - cream for a foe, red for one of the party.
 // Effects come from pools filled once per battle, so the 60 fps loop allocates nothing.
-import { ENEMIES, SKILLS, ITEMS, ART_OF, SPECIES, CHARS } from './data.js?v=1';
-import { ENEMY_ART } from './enemy_art.js?v=1';
-import { CAST, PEOPLE, PEOPLE_IMAGE } from './people_art.js?v=1';
-import * as R from './rules.js?v=1';
-import { t, STR, getLang } from './ui.js?v=1';
-import { hex, NES } from './tiles.js?v=1';
-import { dieCut, grainCanvas } from './paper.js?v=1';
+import { ENEMIES, SKILLS, ITEMS, ART_OF, SPECIES, CHARS } from './data.js?v=2';
+import { ENEMY_ART } from './enemy_art.js?v=2';
+import { CAST, PEOPLE, PEOPLE_IMAGE } from './people_art.js?v=2';
+import * as R from './rules.js?v=2';
+import { t, STR, getLang } from './ui.js?v=2';
+import { hex, NES } from './tiles.js?v=2';
+import { dieCut, grainCanvas } from './paper.js?v=2';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const imgs = {};
 function img(src) { if (!imgs[src]) { imgs[src] = new Image(); imgs[src].src = src; } return imgs[src]; }
-export const ENEMY_IMG = 'assets/enemies.png?v=1';
+export const ENEMY_IMG = 'assets/enemies.png?v=2';
 export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } }
 
 const SCENES = {   // backdrop strip colours (NES indexes): sky, far, near
@@ -622,7 +622,7 @@ export async function battle(G, foeIds, opts = {}) {
   const dashTo = (a, f) => { const q = f.g; a.p.dx = Math.max(-150, Math.min(150, q.cx - (q.cx > a.g.hx ? 10 : -10) - a.g.hx)); a.p.dy = Math.min(0, q.foot + 10 - a.g.foot); };
 
   drawStat();
-  au.play(opts.music || (isBoss ? (finalFight ? 'final' : 'boss') : 'battle'));
+  au.play(opts.music || (isBoss ? (finalFight ? 'beasts' : 'boss') : 'battle'));
   if (!fast) { root.classList.add('enter'); await sleep(300); root.classList.remove('enter'); }
   {
     const lead = foes.find((f) => f.id === opts.lead) || foes[0], n = foes.length;

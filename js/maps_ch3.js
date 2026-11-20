@@ -1,6 +1,6 @@
 // Chapter 3 「南疆」 The Southlands (by ship): Fishing-fire Isle, Green Bamboo village, the Bamboo Sea, Poison Dragon
 // Marsh, Yankou and the Red Flame Caves. The chapter ends with the theft at the island inn.
-import { L, P, lines, chapter, freeBeasts, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=1';
+import { L, P, lines, chapter, freeBeasts, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=2';
 
 // the night at the inn of Fishing-fire Isle: Mo Jide's sleeping draught, and Tie Wusi
 async function innTheft(S) {
@@ -107,7 +107,7 @@ const qingzhu = {
         S.set('amanMet');
         await lines(S, [['aman', '嗷嗚——咕嚕咕嚕，汪！', 'Awoo - gurgle gurgle, woof!'], ['yishuo', '哥，我懂！她說……她肚子餓了！', 'Brother, I get it! She says... she\'s hungry!']]);
         const pet = S.G.party.find((m) => m.kind === 'mon');
-        if (pet) { const R = await import('./rules.js?v=1'); const nm = R.nameOf(pet, 'zh'), ne = R.nameOf(pet, 'en'); await lines(S, [[null, nm + '豎起耳朵聽了一會兒，對你們低低叫了兩聲。', ne + ' pricks up its ears, listens, then gives two low cries.'], [null, '（牠好像在說：「毒龍沼的妖物在哭。牠們身上的鈴鐺，好痛。」）', '(It seems to say: "The creatures of the marsh are weeping. The bells on them hurt so much.")']]); }
+        if (pet) { const R = await import('./rules.js?v=2'); const nm = R.nameOf(pet, 'zh'), ne = R.nameOf(pet, 'en'); await lines(S, [[null, nm + '豎起耳朵聽了一會兒，對你們低低叫了兩聲。', ne + ' pricks up its ears, listens, then gives two low cries.'], [null, '（牠好像在說：「毒龍沼的妖物在哭。牠們身上的鈴鐺，好痛。」）', '(It seems to say: "The creatures of the marsh are weeping. The bells on them hurt so much.")']]); }
         else await S.say('oldman', L('阿蠻說，毒龍沼的妖物在哭，牠們身上的鈴鐺讓牠們很痛。毒龍沼在寨子西邊。', 'A-Man says the creatures of the marsh are weeping; the bells on them hurt. The marsh is west of the village.'));
         return S.say('yishuo', L('……原來不是餓了。', '...So she wasn\'t hungry.'));
       }
@@ -317,7 +317,7 @@ const chiyan3 = {
   ],
   chests: [{ item: 'w10' }, { item: 'emberstone' }],
   links: { 2: ['chiyan2', 2] },
-  boss: { id: 'b_crow', flag: 'chiyanDone', art: 'bx_crow', give: 'huopo',
+  boss: { id: 'b_crow', flag: 'chiyanDone', music: 'final', art: 'bx_crow', give: 'huopo',
     pre: [[null, L('火山口上，一隻三足火鴉被鎖在岩柱上，身上纏著燒紅的鈴鏈。', 'At the crater a three-legged fire crow is chained to a rock pillar, wrapped in red-hot bell chains.')],
           ['chutiankuo', L('……這就是我爹做的事？', '...This is what my father does?')]],
     post: [[null, L('鈴鏈熔斷了。火鴉振翅飛向天空，灑下一團不燙手的火焰。', 'The bell chains melt. The crow spreads its wings and soars, letting fall a flame that does not burn.')]],

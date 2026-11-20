@@ -1,7 +1,7 @@
 // The story's set pieces: the opening, the last confrontation on the tower, and the ending with its epilogue.
-import { L, lines } from './maps_base.js?v=1';
-import { CAST } from './people_art.js?v=1';
-import { t } from './ui.js?v=1';
+import { L, lines } from './maps_base.js?v=2';
+import { CAST } from './people_art.js?v=2';
+import { t } from './ui.js?v=2';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
