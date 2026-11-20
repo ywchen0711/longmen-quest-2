@@ -7,18 +7,18 @@
 // on the target's card (boxed by blinking corner marks), which flashes, recoils on its hinge and sheds paper scraps,
 // and the number pops up on a paper tag over the card that was hit - cream for a foe, red for one of the party.
 // Effects come from pools filled once per battle, so the 60 fps loop allocates nothing.
-import { ENEMIES, SKILLS, ITEMS, ART_OF, SPECIES, CHARS } from './data.js?v=2';
-import { ENEMY_ART } from './enemy_art.js?v=2';
-import { CAST, PEOPLE, PEOPLE_IMAGE } from './people_art.js?v=2';
-import * as R from './rules.js?v=2';
-import { t, STR, getLang } from './ui.js?v=2';
-import { hex, NES } from './tiles.js?v=2';
-import { dieCut, grainCanvas } from './paper.js?v=2';
+import { ENEMIES, SKILLS, ITEMS, ART_OF, SPECIES, CHARS } from './data.js?v=3';
+import { ENEMY_ART } from './enemy_art.js?v=3';
+import { CAST, PEOPLE, PEOPLE_IMAGE } from './people_art.js?v=3';
+import * as R from './rules.js?v=3';
+import { t, STR, getLang } from './ui.js?v=3';
+import { hex, NES } from './tiles.js?v=3';
+import { dieCut, grainCanvas } from './paper.js?v=3';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const imgs = {};
 function img(src) { if (!imgs[src]) { imgs[src] = new Image(); imgs[src].src = src; } return imgs[src]; }
-export const ENEMY_IMG = 'assets/enemies.png?v=2';
+export const ENEMY_IMG = 'assets/enemies.png?v=3';
 export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } }
 
 const SCENES = {   // backdrop strip colours (NES indexes): sky, far, near

@@ -236,7 +236,7 @@ export const ITEMS = {
   cl5: { zh: '龍鱗項圈', en: 'Dragon-scale Collar', kind: 'cl', def: 21, atk: 6, price: 6200 },
   cl6: { zh: '麒麟項圈', en: 'Qilin Collar', kind: 'cl', def: 28, atk: 8, mhp: 30, price: 12000 },
 };
-export const BAG_MAX = 24;   // kinds of items carried (stacks of up to 9)
+export const BAG_MAX = 100;   // kinds of items carried (stacks of up to 9)
 // the places on the body, in menu order. People wear the first seven; monsters a collar and a pendant.
 export const SLOTS = ['w', 'hd', 'a', 'ck', 'c', 'pd', 'bt', 'cl'];
 export const HUMAN_SLOTS = ['w', 'hd', 'a', 'ck', 'c', 'pd', 'bt'];
