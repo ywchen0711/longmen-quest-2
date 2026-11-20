@@ -1,18 +1,18 @@
 // The game: where the party is, walking on tile maps (the leader in front, the others following in a line), the
 // ship, people and their scripts, chests, doors, encounters, recruiting monsters, the camp, menus, inns, shops,
 // saving and the story's turning points. The view only draws what this holds.
-import { MAPS, PLACES, TILES, L, TOWNS } from './maps.js?v=3';
-import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map.js?v=3';
-import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=3';
-import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=3';
-import { NES, spr } from './tiles.js?v=3';
-import { registerSheet } from './view.js?v=3';
-import { dieCut } from './paper.js?v=3';
-import { PEOPLE, CAST } from './people_art.js?v=3';
-import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=3';
-import * as R from './rules.js?v=3';
-import { battle, ENEMY_IMG } from './battle.js?v=3';
-import { t, STR, getLang, setLang, nameOf } from './ui.js?v=3';
+import { MAPS, PLACES, TILES, L, TOWNS } from './maps.js?v=4';
+import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map.js?v=4';
+import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=4';
+import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=4';
+import { NES, spr } from './tiles.js?v=4';
+import { registerSheet } from './view.js?v=4';
+import { dieCut } from './paper.js?v=4';
+import { PEOPLE, CAST } from './people_art.js?v=4';
+import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=4';
+import * as R from './rules.js?v=4';
+import { battle, ENEMY_IMG } from './battle.js?v=4';
+import { t, STR, getLang, setLang, nameOf } from './ui.js?v=4';
 
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const SAVE_KEYS = ['lq2_slot1', 'lq2_slot2', 'lq2_slot3'];

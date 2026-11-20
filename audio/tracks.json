@@ -3,103 +3,103 @@
   "zh": "萬妖鈴",
   "en": "The Bell of Ten Thousand Beasts",
   "loop": true,
-  "dur": 34.286
+  "dur": 68.571
  },
  "town": {
   "zh": "市井",
   "en": "Market Streets",
   "loop": true,
-  "dur": 30.476
+  "dur": 60.952
  },
  "town2": {
   "zh": "水鄉茶館",
   "en": "A Teahouse in the Water Country",
   "loop": true,
-  "dur": 20.0
+  "dur": 40.0
  },
  "town3": {
   "zh": "北雁關",
   "en": "Beiyan Pass",
   "loop": true,
-  "dur": 19.2
+  "dur": 38.4
  },
  "village": {
   "zh": "杏花炊煙",
   "en": "Cookfire Smoke among the Apricot Blossoms",
   "loop": true,
-  "dur": 18.462
+  "dur": 36.923
  },
  "camp": {
   "zh": "百獸山寨",
   "en": "The Hundred Beasts Camp",
   "loop": true,
-  "dur": 16.0
+  "dur": 32.0
  },
  "field": {
   "zh": "江湖再行",
   "en": "Back on the Road of the Jianghu",
   "loop": true,
-  "dur": 35.556
+  "dur": 71.111
  },
  "sea": {
   "zh": "破浪",
   "en": "Breaking the Waves",
   "loop": true,
-  "dur": 17.143
+  "dur": 34.286
  },
  "dungeon": {
   "zh": "幽洞",
   "en": "Hollow Dark",
   "loop": true,
-  "dur": 22.326
+  "dur": 44.651
  },
  "temple": {
   "zh": "鈴音寺",
   "en": "The Bell Temple",
   "loop": true,
-  "dur": 27.429
+  "dur": 54.857
  },
  "mansion": {
   "zh": "舊宅幽魂",
   "en": "The Ghost of the Old Mansion",
   "loop": true,
-  "dur": 24.615
+  "dur": 49.231
  },
  "tower": {
   "zh": "萬妖塔",
   "en": "The Tower of Ten Thousand Beasts",
   "loop": true,
-  "dur": 20.87
+  "dur": 41.739
  },
  "battle": {
   "zh": "群戰",
   "en": "Many Against Many",
   "loop": true,
-  "dur": 22.588
+  "dur": 45.176
  },
  "boss": {
   "zh": "宗門魔影",
   "en": "Shadows of the Sect",
   "loop": true,
-  "dur": 22.4
+  "dur": 44.8
  },
  "final": {
   "zh": "鈴心決戰",
   "en": "Battle at the Heart of the Bell",
   "loop": true,
-  "dur": 24.545
+  "dur": 49.091
  },
  "beasts": {
   "zh": "萬妖亂舞",
   "en": "Riot of Ten Thousand Beasts",
   "loop": true,
-  "dur": 108.0
+  "dur": 216.0
  },
  "ending": {
   "zh": "江湖又一年",
   "en": "Another Year in the Jianghu",
   "loop": false,
-  "dur": 76.497
+  "dur": 147.508
  },
  "j_win": {
   "zh": "旗開得勝",

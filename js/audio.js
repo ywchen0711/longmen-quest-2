@@ -1,5 +1,6 @@
 // Music: one reused <audio> element (iOS-friendly), AAC where the browser can play it, Ogg otherwise.
 // Jingles use a second reused element. Sound effects are tiny square/noise blips synthesised with Web Audio.
+const AV = '?a=2';   // bump when the music files are re-rendered, so browsers fetch the new ones
 export class Audio {
   constructor() {
     const a = document.createElement('audio');
@@ -27,13 +28,13 @@ export class Audio {
     if (this.ctx) { try { const b = this.ctx.createBuffer(1, 1, 22050), s = this.ctx.createBufferSource(); s.buffer = b; s.connect(this.ctx.destination); s.start(0); } catch (e) {} }
     // start (or prime) both elements inside the gesture so iOS lets them play later
     const want = this.cur; this.cur = null;
-    if (want) this.play(want); else { this.music.src = 'audio/title.' + this.ext; this.music.play().then(() => { if (!this.cur) this.music.pause(); }).catch(() => {}); }
+    if (want) this.play(want); else { this.music.src = 'audio/title.' + this.ext + AV; this.music.play().then(() => { if (!this.cur) this.music.pause(); }).catch(() => {}); }
     this.jingleEl.src = 'audio/j_save.' + this.ext; this.jingleEl.muted = true; this.jingleEl.play().then(() => { this.jingleEl.pause(); this.jingleEl.muted = false; }).catch(() => { this.jingleEl.muted = false; });
   }
   play(name) {
     if (this.cur === name) { if (this.unlocked && this.music.paused && !this.inJingle) this.music.play().catch(() => {}); return; }
     this.cur = name; if (!this.unlocked) return;
-    this.music.src = 'audio/' + name + '.' + this.ext; this.music.loop = name !== 'ending'; this.music.currentTime = 0;
+    this.music.src = 'audio/' + name + '.' + this.ext + AV; this.music.loop = name !== 'ending'; this.music.currentTime = 0;
     if (!this.inJingle) this.music.play().catch(() => {});
   }
   stop() { this.cur = null; this.music.pause(); }

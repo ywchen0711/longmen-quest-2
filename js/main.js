@@ -1,13 +1,13 @@
 // Boot: build the view, the title screen, the opening, and run the fixed-timestep loop.
-import { View, pickQuality, loadImage, registerSheet } from './view.js?v=3';
-import { Input } from './input.js?v=3';
-import { UI, t, STR, getLang, setLang } from './ui.js?v=3';
-import { Audio } from './audio.js?v=3';
-import { Game, mapName } from './game.js?v=3';
-import { CAST, PEOPLE_IMAGE } from './people_art.js?v=3';
-import { preloadBattleArt, ENEMY_IMG } from './battle.js?v=3';
-import { paperTileURL, deckleURL, woodURL } from './paper.js?v=3';
-import { opening as storyOpening } from './story.js?v=3';
+import { View, pickQuality, loadImage, registerSheet } from './view.js?v=4';
+import { Input } from './input.js?v=4';
+import { UI, t, STR, getLang, setLang } from './ui.js?v=4';
+import { Audio } from './audio.js?v=4';
+import { Game, mapName } from './game.js?v=4';
+import { CAST, PEOPLE_IMAGE } from './people_art.js?v=4';
+import { preloadBattleArt, ENEMY_IMG } from './battle.js?v=4';
+import { paperTileURL, deckleURL, woodURL } from './paper.js?v=4';
+import { opening as storyOpening } from './story.js?v=4';
 
 const params = new URLSearchParams(location.search);
 const NORENDER = params.has('norender');

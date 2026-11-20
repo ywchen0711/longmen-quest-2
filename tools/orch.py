@@ -1124,6 +1124,7 @@ ARR['j_join'] = dict(rt=1.8, wet=0.22, target=-16.0, parts=[
 
 # =================================================================================== track render
 PART_REF = -20.0
+TEMPO = 0.5
 SRC_BIAS = {'drums': -3.0, 'extra': -3.0}
 
 
@@ -1187,6 +1188,8 @@ def render_track(name):
     loop = tr.get('loop', True)
     rng = np.random.default_rng(sum(map(ord, name)) * 7919)
     secs = tr['sections']
+    if not name.startswith('j_'):          # the owner found the score too fast: music plays at TEMPO x the written bpm (jingles keep theirs)
+        secs = [dict(sec, bpm=sec['bpm'] * TEMPO) for sec in secs]
     sect_parts = arr.get('sections') or [arr['parts']] * len(secs)
     lens = []
     for s in secs:

@@ -1,6 +1,6 @@
 // Chapter 1 「鈴聲」 The Bell: Longmen, Xinghua Village, the Hundred Beasts Camp, the Wolf Slope, Luoxia Town and
 // the Bell Temple.
-import { L, P, lines, chapter, freeBeasts } from './maps_base.js?v=3';
+import { L, P, lines, chapter, freeBeasts } from './maps_base.js?v=4';
 
 // ================================================================= 龍門鎮 Longmen Town (home)
 const longmen = {
