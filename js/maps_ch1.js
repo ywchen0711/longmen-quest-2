@@ -1,6 +1,6 @@
 // Chapter 1 「鈴聲」 The Bell: Longmen, Xinghua Village, the Hundred Beasts Camp, the Wolf Slope, Luoxia Town and
 // the Bell Temple.
-import { L, P, lines, chapter, freeBeasts } from './maps_base.js?v=6';
+import { L, P, lines, chapter, freeBeasts } from './maps_base.js?v=7';
 
 // ================================================================= 龍門鎮 Longmen Town (home)
 const longmen = {
@@ -427,6 +427,6 @@ const lingyin3 = {
 };
 
 lingyin1.looks['11,14'] = L('寺門的告示被撕了一半：「……知客僧留：大殿的樓梯在東南角，鐘樓在最上面。兩旁鈴形門，以鈴片開之……」', 'The notice at the gate is half torn away: "...from the guest-master: the Great Hall\'s stairs are in the south-east corner; the bell tower is at the top. The bell-shaped side doors open to the shard..."');
-{ const hu = longmen.people.C.say; longmen.people.C.say = async (S) => { await hu(S); const { HU_STAGE, stage } = await import('./hints.js?v=6'); await lines(S, HU_STAGE[stage(S.G)] || []); }; }
+{ const hu = longmen.people.C.say; longmen.people.C.say = async (S) => { await hu(S); const { HU_STAGE, stage } = await import('./hints.js?v=7'); await lines(S, HU_STAGE[stage(S.G)] || []); }; }
 
 export const CH1 = { longmen, xinghua, camp, yelang1, yelang2, luoxia, lingyin1, lingyin2, lingyin3 };

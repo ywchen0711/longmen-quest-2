@@ -12,10 +12,12 @@ import * as THREE from 'three';
 import { EffectComposer } from '../lib/addons/EffectComposer.js';
 import { RenderPass } from '../lib/addons/RenderPass.js';
 import { ShaderPass } from '../lib/addons/ShaderPass.js';
-import { tex, spr, FACES, SPR, POP } from './tiles.js?v=6';
-import { TILES } from './maps.js?v=6';
-import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=6';
-import { inkWash, fretBorder, sealCanvas } from './ink.js?v=6';
+import { tex, spr, FACES, SPR, POP } from './tiles.js?v=7';
+import { TILES } from './maps.js?v=7';
+import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=7';
+import { inkWash, fretBorder, sealCanvas } from './ink.js?v=7';
+import { printScenery, frontOfRange, OW_POP, PEAK_CARDS, TREE_CARDS } from './overworld.js?v=7';
+Object.assign(POP, OW_POP);   // the world map's short pop-up peaks and trees join the atlas
 const SEAL_WORLD = '龍門萬妖';   // the seal printed on the world map's page
 
 // the one full-screen pass: a light depth-of-field blur away from the focus band (one pass, 9 taps where blurred,
@@ -83,7 +85,15 @@ const GROUND_FS = `${PAPER_GLSL}
   void main(){
     vec2 q = (vW.xz - uPrint.xy) / (uPrint.zw - uPrint.xy);
     vec3 col = uPaper;
-    if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) { vec4 t = texPix(uMap, q, dFdx(q), dFdy(q)); vec3 tc = t.rgb / max(t.a, 0.02); vec3 ink = mix(tc, vec3(dot(tc, vec3(0.3, 0.55, 0.15))), 0.3); ink.b = mix(ink.b, max(ink.b, ink.g * 0.8), 0.35); ink *= uInk; col = mix(col, ink * mix(vec3(1.0), uPaper, 0.38), t.a * 0.86); }
+    if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) {
+      vec4 t = texPix(uMap, q, dFdx(q), dFdy(q));
+      // the printed scenery (forests, ranges, hills) carries alpha 245/255 as a marker: it is printed in stronger
+      // ink. (A linear ramp either side of the marker, so the one-pixel blend at its edges changes smoothly.)
+      float sc = clamp(1.0 - abs(t.a - 0.9608) / 0.0392, 0.0, 1.0);
+      vec3 tc = mix(t.rgb / max(t.a, 0.02), t.rgb, sc);
+      vec3 ink = mix(tc, vec3(dot(tc, vec3(0.3, 0.55, 0.15))), mix(0.3, 0.12, sc)); ink.b = mix(ink.b, max(ink.b, ink.g * 0.8), 0.35); ink *= uInk;
+      col = mix(col, ink * mix(vec3(1.0), uPaper, mix(0.38, 0.14, sc)), mix(t.a * 0.86, 0.95, sc));
+    }
     float gr = texture2D(uGrain, vW.xz * 0.19).r; col *= 0.8 + 0.2 * gr;
     float g = vW.x - uGutter, ag = abs(g) - 1.7;
     col *= 1.0 - 0.34 * exp(-g * g * 1.1) + 0.05 * exp(-ag * ag * 0.9);       // the gutter: shadow, then the page's lift
@@ -367,7 +377,8 @@ export class View {
 
   // the ground printed on the page: one canvas, 16 pixels a tile; `at(x, z)` names the tile face (or null for blank)
   // deco: { kind(x, z) -> 'water' | 'mount' | 'snow' | 'forest' | 'land' | null, seal: text, small: text } (light pages only)
-  printGround(x0, z0, x1, z1, at, deco = null) {
+  // over(g, ox, oy): drawn over the tiles and the ink washes (the printed scenery)
+  printGround(x0, z0, x1, z1, at, deco = null, over = null) {
     const M = 2, T = 16, W = x1 - x0, H = z1 - z0, c = canvasOf((W + 2 * M) * T, (H + 2 * M) * T), g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
     for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {
@@ -375,8 +386,9 @@ export class View {
       const t = tex(f), ox = t.width > 16 ? ((x & 1) * 16) : 0, oy = t.height > 16 ? ((z & 1) * 16) : 0;
       g.drawImage(t, ox, oy, 16, 16, (x - x0 + M) * T, (z - z0 + M) * T, T, T);
     }
+    if (deco && deco.kind) inkWash(g, W, H, (x, z) => deco.kind(x + x0, z + z0), M * T, M * T, T, W * 7 + H);
+    if (over) over(g, M * T, M * T);
     if (deco) {
-      if (deco.kind) inkWash(g, W, H, (x, z) => deco.kind(x + x0, z + z0), M * T, M * T, T, W * 7 + H);
       // the 回紋 border runs round the margin, 3/4 of a tile outside the map; seals at two corners
       const b0 = Math.round(M * T - 1.25 * T), b1x = Math.round((W + M) * T + 1.25 * T), b1y = Math.round((H + M) * T + 1.25 * T);
       fretBorder(g, b0, b0, b1x, b1y, 8);
@@ -423,24 +435,36 @@ export class View {
       if (c === 'X') { dyn.rope.push(this.card('plank', x + 0.5, z + 1, 1, 1, { flags: FLAT | NOSHADOW, rep: 1 })); if (x % 2 === 0) this.sprite('sign', x + 0.5, z + 0.95, 0.35, { flags: NOTAB }); }
       if (c === 'H') dyn.chain.push(this.sprite('chain', x + 0.5, z + 0.6, 1.1, { flags: NOTAB }));
       if (c === 'K') dyn.ice.push(this.sprite('icewall', x + 0.5, z + 0.7, 1.2));
-      if (c === 'b') { const n = 1; for (let i = 0; i < n; i++) this.sprite('bamboo', x + 0.5, z + 0.6, 0.75, { yaw: 0 }); }
-      if (c === 'V') this.sprite('volcanopeak', x + 0.5, z + 0.7, 1.5, { yaw: 0, flip: false });
-      if (c === 'f') { const n = 1; for (let i = 0; i < n; i++) { const pine = r() < 0.4; this.sprite(pine ? 'cpine' : 'tree', x + 0.5, z + 0.6, (pine ? 1.45 : 1.05), { yaw: 0, flip: false }); } }
-      if (c === 'h') { this.sprite('chill', x + 0.5, z + 0.5, 0.95, { flip: false }); }
-      if (c === 'M') this.sprite(r() < 0.5 ? 'cmount' : 'cmount2', x + 0.5, z + 0.7, 1.75, { yaw: 0, flip: false });
-      if (c === 'N') this.sprite('csnowmount', x + 0.5, z + 0.7, 1.75, { yaw: 0, flip: false });
       if (c === '=' && ((rows[z][x - 1] === '~' && rows[z][x + 1] === '~') || ((rows[z - 1] || '')[x] === '~' && (rows[z + 1] || '')[x] === '~'))) this.sprite('cbridge', x + 0.5, z + 0.75, 1.6, { yaw: rows[z][x - 1] === '~' ? Math.PI / 2 : 0, flags: NOSHADOW });
       if (c === 'n' && r() < 0.08) this.sprite('snowpine', x + 0.5, z + 0.6, 1);
       if (c === 's' && r() < 0.03) this.sprite('palm', x + 0.5, z + 0.6, 1);
       if (c === 'w' && r() < 0.1) this.sprite('deadtree', x + 0.5, z + 0.6, 0.9);
       if (c === '.' && r() < 0.02) this.sprite('bush', x + 0.5, z + 0.6, 0.6);
     } }
+    const sc = this.worldScenery(rows, places, signs);
     for (const [x, z, look] of Object.values(places)) this.placeModel(x, z, look);
     for (const [x, z] of signs) this.sprite('sign', x + 0.5, z + 0.6, 0.85);
-    const WK = { '~': 'water', c: 'water', M: 'mount', N: 'snow', f: 'forest' };
-    this.printGround(0, 0, Wd, H, (x, z) => ground[z][x], { kind: (x, z) => WK[rows[z][x]] || 'land', seal: SEAL_WORLD, small: SEAL_WORLD.slice(0, 2) });
+    const WK = { '~': 'water', c: 'water', M: 'mount', N: 'snow', V: 'mount', f: 'forest', b: 'forest' };
+    this.printGround(0, 0, Wd, H, (x, z) => ground[z][x], { kind: (x, z) => WK[rows[z][x]] || 'land', seal: SEAL_WORLD, small: SEAL_WORLD.slice(0, 2) }, (g, ox, oy) => printScenery(g, 0, 0, Wd, H, sc.kind, ox, oy, sc.foot));
     this.finishPieces(); this.setOpen(open);
     this.camDist = 21 * ZOOM; this.theme({ paper: 0xf3e8cf }); this.dark(false);
+  }
+  // the world's scenery is printed on the page like an 8-bit overworld (a clump of trees, a peak, a mound in every
+  // tile, with edge and corner pieces); only a row of short pop-up peaks stands along the front of each range, one
+  // per tile and no taller than it, kept clear of the places, the signposts and the bridges
+  worldScenery(rows, places, signs) {
+    const H = rows.length, Wd = rows[0].length, SK = { f: 'forest', b: 'bamboo', h: 'hill', M: 'mount', N: 'snowmount', V: 'volcano' };
+    const key = (x, z) => x + ',' + z, at = new Set(), wide = new Set();
+    for (const [x, z] of [...Object.values(places), ...signs]) { at.add(key(x, z)); wide.add(key(x, z)); }
+    for (let z = 0; z < H; z++) for (let x = 0; x < Wd; x++) if (rows[z][x] === '=' && ((rows[z][x - 1] === '~' && rows[z][x + 1] === '~') || ((rows[z - 1] || '')[x] === '~' && (rows[z + 1] || '')[x] === '~'))) wide.add(key(x, z));
+    const kind = (x, z) => (x < 0 || z < 0 || x >= Wd || z >= H || at.has(key(x, z)) ? null : SK[rows[z][x]] || null);
+    const foot = new Set();
+    for (let z = 0; z < H; z++) for (let x = 0; x < Wd; x++) {
+      const k = kind(x, z); if (!k || !frontOfRange(kind, x, z) || wide.has(key(x - 1, z)) || wide.has(key(x + 1, z))) continue;
+      const list = PEAK_CARDS[k]; foot.add(key(x, z));
+      this.sprite(list[(x * 7 + z * 3) % list.length], x + 0.5, z + 0.97, 1, { flip: false });
+    }
+    return { kind, foot: (x, z) => foot.has(key(x, z)) };
   }
   setOpen(open) { this.setVis(this.dyn.rope, !!open.X); this.setVis(this.dyn.chain, !open.H); this.setVis(this.dyn.ice, !open.K); }
   // towns, caves and towers on the world map: two or three cut-out layers stood one behind the other
@@ -470,7 +494,7 @@ export class View {
     // an apron of scenery round the edge so the map does not end at its last row
     const apron = M.apron || { town: '"', village: '"', city: '"', temple: '"', pavilion: '~', forest: '"', desert: 's', fort: '#', canal: '"', port: '~', ranch: '"', bamboo: 'j', jungle: 'j', snowcamp: 'n', isle: '~', volcvillage: 'V', swamp: 'w' }[M.theme];
     const A = apron ? (apron === '~' ? 10 : 17) : 0, x0 = -A, z0 = -A, x1 = W + A, z1 = H + A;
-    const G = {}; const solid = {};   // printed face per tile; standing blocks per tile
+    const G = {}; const solid = {}, SC = {};   // printed face per tile; standing blocks per tile; printed scenery per tile
     const key = (x, z) => x + ',' + z;
     for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {
       const inside = z >= 0 && z < H && x >= 0 && x < W;
@@ -479,15 +503,15 @@ export class View {
       if (apron === '~') { G[key(x, z)] = 'water'; if ((((z % 3) + 3) % 3 === 0 && (((x + (z % 2 ? 3 : 0)) % 6) + 6) % 6 === 0)) this.sprite('wave', x + 0.5, z + 0.6, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: false }); continue; }
       if (apron === '#') { G[key(x, z)] = theme.wallTop; solid[key(x, z)] = 'wall'; continue; }
       if (apron === 's') { G[key(x, z)] = 'sand'; if (r() < 0.06) this.sprite('palm', x + 0.5, z + 0.6, 1); continue; }
-      if (apron === 'j') { G[key(x, z)] = 'bambooFloor'; if (r() < 0.5) this.sprite('bamboo', x + 0.5, z + 0.6, 0.9); continue; }
-      if (apron === 'n') { G[key(x, z)] = 'snow'; if (r() < 0.25) this.sprite('snowpine', x + 0.5, z + 0.5, 1); continue; }
+      if (apron === 'j') { G[key(x, z)] = 'bambooFloor'; SC[key(x, z)] = 'bamboo'; continue; }
+      if (apron === 'n') { G[key(x, z)] = 'snow'; if ((((x + 3 * z) % 5) + 5) % 5 === 0) this.sprite('snowpine', x + 0.5, z + 0.6, 1); continue; }   // evenly spaced, never side by side
       if (apron === 'V') { G[key(x, z)] = 'volcRock'; if (r() < 0.12) this.sprite('rock', x + 0.5, z + 0.6, 0.8); continue; }
       if (apron === 'w') { G[key(x, z)] = 'mud'; if (r() < 0.1) this.sprite('deadtree', x + 0.5, z + 0.6, 0.9); else if (r() < 0.1) this.sprite('reed', x + 0.5, z + 0.6, 0.6); continue; }
-      G[key(x, z)] = M.theme === 'forest' ? 'forestFloor' : 'grass';
-      if (r() < (M.theme === 'forest' ? 0.75 : 0.45)) { const pine = r() < (M.theme === 'forest' ? 0.3 : 0.45); this.sprite(pine ? 'cpine' : 'tree', x + 0.5, z + 0.6, (pine ? 1.5 : 1.1), { yaw: 0, flip: false }); }
+      G[key(x, z)] = 'forestFloor'; SC[key(x, z)] = 'forest';   // a printed forest round the map
     }
     let ci = 0; const tree = M.theme === 'snowpeak' ? 'snowpine' : 'tree';
     const townish = !theme.card && !M.dark && /town|village|city|temple|pavilion|canal|port|isle|belltemple|fortress|ranch/.test(M.theme), holy = /temple|pavilion|belltemple/.test(M.theme);
+    const grove = (x, z) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => { const X = x + dx, Z = z + dz; return Z < 0 || Z >= H || X < 0 || X >= W ? !!apron && apron !== '~' && apron !== '#' : rows[Z][X] === '"'; });
     const TOWNTREES = [['cpine', 1.5], ['cwillow', 1.45], ['cplum', 1.3], ['tree', 1.15], ['cpine', 1.6], ['cbamboo', 1.0]];
     for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
       let c = rows[z][x]; if (c === ' ') continue;
@@ -500,7 +524,8 @@ export class View {
       if (c === 'x' && theme.fortFence) { G[k] = 'palisadeTop'; solid[k] = 'pal'; continue; }
       G[k] = floorOf(c);
       const cx = x + 0.5, yaw = 0;
-      if (c === '"' && M.theme === 'forest') { G[k] = 'leafTop'; solid[k] = 'hedge'; if (r() < 0.22) this.sprite('tree', cx, z + 0.45, 0.9, { y: 0.8, flags: NOSHADOW | NOTAB }); }
+      if (c === '"' && M.theme === 'forest') { G[k] = 'leafTop'; solid[k] = 'hedge'; if ((((x + 3 * z) % 5) + 5) % 5 === 0) this.sprite('tree', cx, z + 0.45, 0.9, { y: 0.8, flags: NOSHADOW | NOTAB }); }
+      else if (c === '"' && townish && grove(x, z)) { G[k] = 'forestFloor'; SC[k] = 'forest'; }   // a row or clump of trees: printed, like the forest round the map
       else if (c === '"' && townish) { const [nm, w] = TOWNTREES[Math.floor(r() * TOWNTREES.length)]; this.sprite(nm, cx, z + 0.55, w, { yaw, flip: false }); }
       else if (c === '"') this.sprite(tree, cx, z + 0.55, 1.15, { yaw });
       else if (c === '%') this.sprite('bush', cx, z + 0.6, 0.9, { yaw });
@@ -511,6 +536,7 @@ export class View {
       else if (c === '&' && holy) this.sprite('cincense', cx, z + 0.5, 0.85);
       else if (c === '&') { const R0 = this.rects.brazier, bh = R0.ah / 16 * this.stretch; this.sprite('brazier', cx, z + 0.5, 0.7); this.sprite('fire', cx, z + 0.52, 0.55, { free: true, y: bh * 0.62, flags: GLOW | NOSHADOW | NOTAB }); }
       else if (c === 'w') this.sprite('well', cx, z + 0.6, 0.9);
+      else if (c === 'j' && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => { const X = x + dx, Z = z + dz; return Z < 0 || Z >= H || X < 0 || X >= W ? apron === 'j' : rows[Z][X] === 'j'; })) { G[k] = 'bambooFloor'; SC[k] = 'bamboo'; }   // a stand of bamboo: printed, with a few short pop-ups
       else if (c === 'j') this.sprite('bamboo', cx, z + 0.55, 0.85, { yaw });
       else if (c === 'y') { G[k] = 'water'; this.sprite('lotus', cx, z + 0.6, 0.85, { flags: NOTAB }); }
       else if (c === 'a') { G[k] = 'lava'; if (r() < 0.3) this.sprite('fire', cx, z + 0.6, 0.45, { free: true, flags: GLOW | NOSHADOW | NOTAB }); }
@@ -571,7 +597,14 @@ export class View {
     }
     const light = !theme.card && !M.dark, nm = (M.name && (M.name.zh || M.name[0])) || '';
     const FK = { water: 'water', forestFloor: 'forest', leafTop: 'forest', bambooFloor: 'forest', void: null, chasm: null };
-    this.printGround(x0, z0, x1, z1, (x, z) => G[key(x, z)] || null, light ? { kind: (x, z) => { const f = G[key(x, z)]; return f ? (f in FK ? FK[f] : 'land') : null; }, seal: nm.slice(0, 4), small: null } : null);
+    // the printed forests get short pop-up trees in an even, sparse pattern (one tile in five, never side by side;
+    // each no taller than its own tile)
+    for (const kk of Object.keys(SC)) {
+      const [x, z] = kk.split(',').map(Number); if ((((x + 3 * z) % 5) + 5) % 5) continue;
+      const L = TREE_CARDS[SC[kk]]; this.sprite(L[(((x * 7 + z * 13) % L.length) + L.length) % L.length], x + 0.5, z + 0.97, 1, { flip: false });
+    }
+    this.printGround(x0, z0, x1, z1, (x, z) => G[key(x, z)] || null, light ? { kind: (x, z) => { const f = G[key(x, z)]; return f ? (f in FK ? FK[f] : 'land') : null; }, seal: nm.slice(0, 4), small: null } : null,
+      (g, ox, oy) => printScenery(g, x0, z0, x1, z1, (x, z) => SC[key(x, z)] || null, ox, oy));
     this.finishPieces();
     this.refresh(state);
     this.camDist = (M.town ? 16 : 15) * ZOOM;

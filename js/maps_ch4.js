@@ -1,6 +1,6 @@
 // Chapter 4 「萬妖峰」 The Peak of Ten Thousand Beasts: Beiyan Pass, the Snow Wolf camp, the Ice Soul Caves and the
 // Tower of Ten Thousand Beasts. The last fight starts the ending (story.js).
-import { L, P, lines, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=6';
+import { L, P, lines, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=7';
 
 // ================================================================= 北雁關 Beiyan Pass (the harbour fortress)
 const beiyan = {
@@ -223,10 +223,10 @@ const wanyao5 = T(L('萬妖塔・鈴心殿', 'Tower: Hall of the Bell\'s Heart')
 ], { enc: null, music: 'tower', links: { 4: ['wanyao4', 4] },
   boss: { id: 'b_mowuya', flag: 'finalDone', s: 'mowuya', music: 'beasts',
     preFn: async (S) => {
-      const story = await import('./story.js?v=6'); await story.finalPre(S);
+      const story = await import('./story.js?v=7'); await story.finalPre(S);
     },
     postFn: async (S) => {
-      const story = await import('./story.js?v=6'); await story.finalPost(S);
+      const story = await import('./story.js?v=7'); await story.finalPost(S);
     } } });
 
 export const CH4 = { beiyan, xuelang, bingpo1, bingpo2, bingpo3, wanyao1, wanyao2, wanyao3, wanyao4, wanyao5 };

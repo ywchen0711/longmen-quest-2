@@ -1,7 +1,7 @@
 // Pixel textures for the pop-up book maps, drawn in code with colours from the NES (2C02) palette only.
 // Each tile face is 16x16 (printed on the page, or on the walls' cards); pop-up pieces (trees, pots, statues, fire) are
 // small typed grids, and mountains, waves and the world map's towns and caves are drawn with shapes (POP).
-import { INK_POP, INK_FACES, chouse, GREYROOF } from './ink.js?v=6';
+import { INK_POP, INK_FACES, chouse, GREYROOF } from './ink.js?v=7';
 export const NES = [
   0x7C7C7C, 0x0000FC, 0x0000BC, 0x4428BC, 0x940084, 0xA80020, 0xA81000, 0x881400, 0x503000, 0x007800, 0x006800, 0x005800, 0x004058, 0x000000, 0x000000, 0x000000,
   0xBCBCBC, 0x0078F8, 0x0058F8, 0x6844FC, 0xD800CC, 0xE40058, 0xF83800, 0xE45C10, 0xAC7C00, 0x00B800, 0x00A800, 0x00A844, 0x008888, 0x000000, 0x000000, 0x000000,

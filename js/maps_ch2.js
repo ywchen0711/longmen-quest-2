@@ -1,5 +1,5 @@
 // Chapter 2 「水鄉」 The Water Country: Suhe City, the old Su mansion, Green Wave Cave and Wangyue Ferry.
-import { L, P, lines, chapter, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=6';
+import { L, P, lines, chapter, huPredict, huoBrag, jiaTalk } from './maps_base.js?v=7';
 
 // 文對仗's couplet contest: he gives the first line, you choose the second
 const COUPLETS = [
