@@ -3,11 +3,11 @@
 // link to the same digit in another map (`links`). Walking off the edge of a town or the first floor of a dungeon
 // leads back to the overworld. Talk scripts are async functions run by game.js with the helpers in `S`
 // (game.js scripts()). The maps themselves live in maps_ch1.js ... maps_ch4.js, one file per chapter of the story.
-import { L, TILES } from './maps_base.js?v=5';
-import { CH1 } from './maps_ch1.js?v=5';
-import { CH2 } from './maps_ch2.js?v=5';
-import { CH3 } from './maps_ch3.js?v=5';
-import { CH4 } from './maps_ch4.js?v=5';
+import { L, TILES } from './maps_base.js?v=6';
+import { CH1 } from './maps_ch1.js?v=6';
+import { CH2 } from './maps_ch2.js?v=6';
+import { CH3 } from './maps_ch3.js?v=6';
+import { CH4 } from './maps_ch4.js?v=6';
 export { L, TILES };
 
 export const MAPS = { ...CH1, ...CH2, ...CH3, ...CH4 };

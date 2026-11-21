@@ -12,14 +12,16 @@ import * as THREE from 'three';
 import { EffectComposer } from '../lib/addons/EffectComposer.js';
 import { RenderPass } from '../lib/addons/RenderPass.js';
 import { ShaderPass } from '../lib/addons/ShaderPass.js';
-import { tex, spr, FACES, SPR, POP } from './tiles.js?v=5';
-import { TILES } from './maps.js?v=5';
-import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=5';
+import { tex, spr, FACES, SPR, POP } from './tiles.js?v=6';
+import { TILES } from './maps.js?v=6';
+import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=6';
+import { inkWash, fretBorder, sealCanvas } from './ink.js?v=6';
+const SEAL_WORLD = '龍門萬妖';   // the seal printed on the world map's page
 
 // the one full-screen pass: a light depth-of-field blur away from the focus band (one pass, 9 taps where blurred,
 // 1 tap in focus), the linear -> sRGB step and the grade (warm tint, vignette, fades and flashes)
 const Final = {
-  uniforms: { tDiffuse: { value: null }, res: { value: new THREE.Vector2(1, 1) }, focus: { value: 0.52 }, band: { value: 0.16 }, amount: { value: 2.4 },
+  uniforms: { tDiffuse: { value: null }, res: { value: new THREE.Vector2(1, 1) }, focus: { value: 0.52 }, band: { value: 0.16 }, amount: { value: 0.0 },
     vig: { value: 0.55 }, fade: { value: 0 }, flash: { value: 0 }, tint: { value: new THREE.Vector3(1.03, 1.0, 0.94) } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 res; uniform float focus, band, amount, vig, fade, flash; uniform vec3 tint; varying vec2 vUv;
@@ -60,16 +62,28 @@ const TEXGRAD = `vec4 texG(sampler2D s, vec2 uv, vec2 gx, vec2 gy) {
   #else
     return texture2D(s, uv);
   #endif
+  }
+  // pixel art without shimmer: sample at the texel centre except within one screen pixel of a texel edge, where the
+  // (linear) filter blends the two texels. gx, gy: the uv gradients (continuous even across a repeat seam)
+  vec4 texPix(sampler2D s, vec2 uv, vec2 gx, vec2 gy) {
+  #if __VERSION__ >= 300
+    vec2 size = vec2(textureSize(s, 0)), p = uv * size, fw = max((abs(gx) + abs(gy)) * size, vec2(1e-4)), f = fract(p);
+    vec2 sx = clamp(f / fw, 0.0, 0.5) + clamp((f - 1.0) / fw + 0.5, 0.0, 0.5);
+    return textureGrad(s, (floor(p) + sx) / size, gx, gy);
+  #else
+    return texture2D(s, uv);
+  #endif
   }`;
 const GROUND_VS = `varying vec3 vW; varying float vDepth;
   void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 mv = viewMatrix * w; vDepth = -mv.z; gl_Position = projectionMatrix * mv; }`;
 const GROUND_FS = `${PAPER_GLSL}
+  ${TEXGRAD}
   uniform sampler2D uMap, uGrain; uniform vec4 uPrint, uPage; uniform float uGutter; uniform vec3 uPaper, uInk;
   varying vec3 vW; varying float vDepth;
   void main(){
     vec2 q = (vW.xz - uPrint.xy) / (uPrint.zw - uPrint.xy);
     vec3 col = uPaper;
-    if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) { vec4 t = texture2D(uMap, q); vec3 ink = mix(t.rgb, vec3(dot(t.rgb, vec3(0.3, 0.55, 0.15))), 0.22) * uInk; col = mix(col, ink * mix(vec3(1.0), uPaper, 0.35), t.a * 0.86); }
+    if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) { vec4 t = texPix(uMap, q, dFdx(q), dFdy(q)); vec3 tc = t.rgb / max(t.a, 0.02); vec3 ink = mix(tc, vec3(dot(tc, vec3(0.3, 0.55, 0.15))), 0.3); ink.b = mix(ink.b, max(ink.b, ink.g * 0.8), 0.35); ink *= uInk; col = mix(col, ink * mix(vec3(1.0), uPaper, 0.38), t.a * 0.86); }
     float gr = texture2D(uGrain, vW.xz * 0.19).r; col *= 0.8 + 0.2 * gr;
     float g = vW.x - uGutter, ag = abs(g) - 1.7;
     col *= 1.0 - 0.34 * exp(-g * g * 1.1) + 0.05 * exp(-ag * ag * 0.9);       // the gutter: shadow, then the page's lift
@@ -100,10 +114,11 @@ const CARD_VS = `${PAPER_GLSL}
       p = vec3(p.x, p.y * c + p.z * s, -p.y * s + p.z * c); n = vec3(n.x, n.y * c + n.z * s, -n.y * s + n.z * c);
       if (iRoll.x != 0.0) { float c2 = cos(iRoll.x), s2 = sin(iRoll.x); p.xy = vec2(p.x * c2 - p.y * s2, p.x * s2 + p.y * c2); }
     }
-    if (has(fl, 1.0)) { float t = uTime * 1.6 + iMisc.w; p.y += 0.03 + sin(t) * 0.03; p.x += sin(t * 0.55) * 0.05; }
+    if (has(fl, 1.0)) { float t = uTime * 1.6 + iMisc.w; p.y += 0.03 + sin(t) * 0.03; }   // waves bob gently (no sideways sway)
     float cy = cos(iMisc.x), sy = sin(iMisc.x);
     p = vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy); n = vec3(n.x * cy + n.z * sy, n.y, -n.x * sy + n.z * cy);
     vec4 w = vec4(p + iPos.xyz, 1.0);
+    if (part < 0.5 || part > 1.5) w.y += 0.012 * (1.0 - clamp(iRise, 0.0, 1.0));
     vW = w.xyz; vN = n; vLoc = vec2(position.x + 0.5, position.y); vPart = part; vFlags = fl;
     vec4 mv = viewMatrix * w; vDepth = -mv.z; gl_Position = projectionMatrix * mv;
   }`;
@@ -111,24 +126,40 @@ const CARD_FS = `${PAPER_GLSL}
   ${TEXGRAD}
   uniform sampler2D uAtlas, uGrain; uniform vec3 uBorder, uCut, uPaper, uEdge; uniform float uTime;
   varying vec2 vLoc, vRep, vSz; varying vec4 vRect; varying vec3 vN, vW; varying float vDepth, vPart, vFlags;
+  // how much of the pixel the cut-out covers: a soft edge one pixel wide when the picture is multisampled
+  // (alpha-to-coverage turns it into sample coverage), else the plain alpha test
+  float cover(float a) {
+  #ifdef A2C
+    return clamp((a - 0.5) / max(fwidth(a), 1e-3) + 0.5, 0.0, 1.0);
+  #else
+    return a < 0.5 ? 0.0 : 1.0;
+  #endif
+  }
   void main(){
-    vec3 col;
+    vec3 col; float alpha = 1.0;
     if (vPart > 0.5 && vPart < 1.5) col = uPaper * (vLoc.y < 0.3 ? 0.78 : 0.94);
     else {
       vec2 r = vLoc * vRep, f = fract(r);
-      vec4 t = texG(uAtlas, vRect.xy + vec2(f.x, 1.0 - f.y) * vRect.zw, dFdx(r) * vRect.zw, dFdy(r) * vRect.zw);
+      vec4 t = texPix(uAtlas, vRect.xy + vec2(f.x, 1.0 - f.y) * vRect.zw, dFdx(r) * vRect.zw, dFdy(r) * vRect.zw);
+      vec3 tc = t.rgb / max(t.a, 0.02);   // (transparent texels are black: undo the darkening the filter mixes in)
       if (has(vFlags, 8.0)) {
         vec2 dd = min(vLoc, 1.0 - vLoc) * vSz; float e = min(dd.x, (1.0 - vLoc.y) * vSz.y);
         bool rim = vPart > 1.5 ? !has(vFlags, 128.0) : !has(vFlags, 64.0);
-        if (rim && e < 0.014) col = uCut; else if (rim && e < 0.05) col = uBorder; else { if (t.a < 0.5) discard; col = t.rgb; }
-      } else { if (t.a < 0.5) discard; col = t.rgb; }
+        if (rim) {
+          float aw = max(fwidth(e), 1e-5), inner = smoothstep(0.05 - aw * 0.5, 0.05 + aw * 0.5, e);
+          alpha = max(1.0 - inner, cover(t.a));
+          col = mix(uBorder, t.a < 0.5 ? uBorder : tc, inner);
+          col = mix(col, uCut, (1.0 - smoothstep(0.014 - aw * 0.5, 0.014 + aw * 0.5, e)) * min(1.0, 0.014 / aw + 0.35));
+        } else { alpha = cover(t.a); col = tc; }
+      } else { alpha = cover(t.a); col = tc; }
     }
+    if (alpha <= 0.0) discard;
   #ifdef EDGE
     col = uEdge;
   #endif
     col *= 0.9 + 0.1 * texture2D(uGrain, vW.xy * 0.37 + vW.z * 0.21).r;
-    if (has(vFlags, 2.0)) gl_FragColor = vec4(col * (1.2 + 0.18 * sin(uTime * 13.0 + vW.x * 5.0)), 1.0);
-    else gl_FragColor = vec4(shade(col, normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0), vW, vDepth), 1.0);
+    if (has(vFlags, 2.0)) gl_FragColor = vec4(col * (1.2 + 0.18 * sin(uTime * 13.0 + vW.x * 5.0)), alpha);
+    else gl_FragColor = vec4(shade(col, normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0), vW, vDepth), alpha);
     #include <colorspace_fragment>
   }`;
 const SHADOW_VS = `${PAPER_GLSL}
@@ -152,10 +183,11 @@ const SHADOW_FS = `uniform float uShadowA; uniform vec3 uShadowCol; varying vec2
   }`;
 
 const WAVE = 1, GLOW = 2, FLAT = 4, RECT = 8, NOSHADOW = 16, NOTAB = 32, NORIM = 64, NOLIDRIM = 128;
-const STIFF = 260, DAMP = 18;
+const STIFF = 260, DAMP = 18, DAMP_EDGE = 27;   // (pieces rising at the view edge while walking: hardly any overshoot)
 // the field camera stands this much further back than it first did (the player asked to zoom out by half: about
 // 1.5x as much map in each direction), and everything tied to the size of the view is scaled with it
 const ZOOM = 1.5;
+const TELE = 1.69;   // how much further back the long-lens camera stands (tan 15 / tan 9): the same view, far less perspective
 
 function canvasOf(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 function texOf(canvas, { repeat = false, mip = true, nearest = true, flip = false } = {}) {
@@ -183,7 +215,7 @@ export class View {
     canvas.addEventListener('webglcontextlost', (e) => e.preventDefault());
     r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.NoToneMapping; r.shadowMap.enabled = false;
     this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0x24160c);
-    this.camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.5, 140);
+    this.camera = new THREE.PerspectiveCamera(18, 16 / 9, 2, 200);
     const C = (h) => new THREE.Color(h);
     this.grainTex = texOf(grainCanvas(256), { repeat: true, nearest: false });
     // uniforms shared by every paper material (one object each, so a change reaches all of them)
@@ -200,12 +232,9 @@ export class View {
     this.blobMat = new THREE.MeshBasicMaterial({ map: texOf(blobC, { nearest: false }), color: 0x3a2410, transparent: true, depthWrite: false });
     this.woodTex = texOf(woodCanvas(256), { repeat: true, nearest: false }); this.edgeTex = texOf(edgeCanvas(), { repeat: true, nearest: false });
     this.post = quality !== 'low';
-    if (this.post) {
-      const size = r.getDrawingBufferSize(new THREE.Vector2());
-      this.composer = new EffectComposer(r, new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType }));
-      this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.grade = new ShaderPass(Final); this.composer.addPass(this.grade);
-    }
+    const gl = r.getContext();
+    this.msaa = this.post && r.capabilities.isWebGL2 && !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float')) && !new URLSearchParams(location.search).has('nomsaa');
+    if (this.post) this.makeComposer();
     this.group = null; this.actors = new Map(); this.time = 0; this.cam = new THREE.Vector3(); this.camReady = false;
     this.lastCheck = new THREE.Vector3(1e9, 0, 0); this.fold = false; this.recheck = true; this.animating = false; this.cheap = false;
     this.pm = new THREE.Matrix4();
@@ -228,6 +257,24 @@ export class View {
     if (this.composer) { this.composer.setPixelRatio(pr); this.composer.setSize(w, h); this.grade.uniforms.res.value.copy(this.renderer.getDrawingBufferSize(new THREE.Vector2())); }
     this.recheck = true;
   }
+  makeComposer() {
+    const r = this.renderer, size = r.getDrawingBufferSize(new THREE.Vector2());
+    if (this.composer) { this.composer.renderTarget1.dispose(); this.composer.renderTarget2.dispose(); }
+    this.composer = new EffectComposer(r, new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: this.msaa ? 4 : 0 }));
+    this.composer.writeBuffer.samples = 0;   // (the scene is drawn into readBuffer; the other target is never drawn now)
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.grade = new ShaderPass(Final); this.grade.needsSwap = false; this.composer.addPass(this.grade);
+  }
+  // a step of the frame-rate watchdog: no multisampling (the cut-outs go back to the alpha test)
+  dropMSAA() {
+    if (!this.msaa) return false;
+    this.msaa = false; const fade = this.grade.uniforms.fade.value, flash = this.grade.uniforms.flash.value;
+    this.makeComposer(); this.grade.uniforms.fade.value = fade; this.grade.uniforms.flash.value = flash; this.resize();
+    const fix = (m) => { if (m && m.defines && 'A2C' in m.defines) { delete m.defines.A2C; m.alphaToCoverage = false; m.needsUpdate = true; } };
+    if (this.P) { fix(this.P.card.material); fix(this.P.edge.material); }
+    for (const a of this.actors.values()) fix(a.mat);
+    return true;
+  }
   // the weakest step of the frame-rate watchdog: no card edges, no pop-up shadows
   setCheap() { this.cheap = true; if (this.P) { this.P.edge.visible = false; this.P.shadow.visible = false; } }
 
@@ -248,12 +295,13 @@ export class View {
     }
     const H = Math.ceil((y + rowH + 2) / 4) * 4, out = canvasOf(S, H); out.getContext('2d').drawImage(c, 0, 0);
     for (const r of Object.values(R)) r.uv = [r.x / S, r.y / H, r.w / S, r.h / H];
-    this.atlas = texOf(out); this.atlas.anisotropy = 4;
+    this.atlas = texOf(out, { nearest: false }); this.atlas.anisotropy = 4;
   }
 
   // ---------------------------------------------------------------- materials
   cardMaterial(map, edge = false) {
-    return new THREE.ShaderMaterial({ uniforms: { ...this.U, uAtlas: { value: map || this.atlas } }, vertexShader: CARD_VS, fragmentShader: CARD_FS, side: THREE.DoubleSide, defines: edge ? { EDGE: 1 } : {} });
+    const defines = {}; if (edge) defines.EDGE = 1; if (this.msaa) defines.A2C = 1;
+    return new THREE.ShaderMaterial({ uniforms: { ...this.U, uAtlas: { value: map || this.atlas } }, vertexShader: CARD_VS, fragmentShader: CARD_FS, side: THREE.DoubleSide, defines, alphaToCoverage: !!this.msaa });
   }
 
   // ---------------------------------------------------------------- building a map
@@ -270,7 +318,10 @@ export class View {
   }
   // a sprite pop-up: art `w` tiles wide, standing at (x, z)
   sprite(name, x, z, w = 1, o = {}) {
-    const R = this.rects[name], k = w / (R.aw * 4), S = this.stretch;
+    const R = this.rects[name], S = this.stretch; if (!o.free) w = R.aw / 16; const k = w / (R.aw * 4);
+    // cards on one row stand in the same plane and the wide ones overlap their neighbours: a hair of depth per column
+    // (invisible, 0-0.012 of a tile) keeps them from z-fighting
+    z += (((Math.floor(x) % 4) + 4) % 4) * 0.004;
     return this.push({ x, y: o.y || 0, z, b: 6 * k * S, w: R.w * k * (o.flip ? -1 : 1), h: R.h * k * S, uv: R.uv, yaw: o.yaw ?? 0, flags: o.flags || 0, ph: o.ph || 0 });
   }
   // a rectangular card printed with a tile face (repeated `rep` times across), optionally with a lid / roof flap
@@ -305,7 +356,7 @@ export class View {
     if (this.cheap) { P.edge.visible = false; P.shadow.visible = false; }
     this.group.add(P.card, P.edge, P.shadow);
     // pop-up animation state
-    P.tgt = new Uint8Array(n); P.vel = new Float32Array(n); P.delay = new Float32Array(n); P.act = new Uint8Array(n); P.active = [];
+    P.tgt = new Uint8Array(n); P.dmp = new Float32Array(n).fill(DAMP); P.vel = new Float32Array(n); P.delay = new Float32Array(n); P.act = new Uint8Array(n); P.active = [];
     P.flags = L.map((p) => p.flags || 0); P.cx = L.map((p) => p.x); P.cz = L.map((p) => p.z); P.cy = L.map((p) => p.h * 0.35);
     P.w = L.map((p) => p.w); P.hx = L.map((p) => Math.cos(p.yaw || 0) * Math.abs(p.w) / 2); P.hz = L.map((p) => -Math.sin(p.yaw || 0) * Math.abs(p.w) / 2);
     this.list = null;
@@ -315,20 +366,31 @@ export class View {
   setUV(i, name) { const r = this.rects[name]; if (!this.P || !r) return; this.P.uv.array.set(r.uv, i * 4); this.P.uv.needsUpdate = true; this.dirty = true; }
 
   // the ground printed on the page: one canvas, 16 pixels a tile; `at(x, z)` names the tile face (or null for blank)
-  printGround(x0, z0, x1, z1, at) {
-    const W = x1 - x0, H = z1 - z0, c = canvasOf(W * 16, H * 16), g = c.getContext('2d');
+  // deco: { kind(x, z) -> 'water' | 'mount' | 'snow' | 'forest' | 'land' | null, seal: text, small: text } (light pages only)
+  printGround(x0, z0, x1, z1, at, deco = null) {
+    const M = 2, T = 16, W = x1 - x0, H = z1 - z0, c = canvasOf((W + 2 * M) * T, (H + 2 * M) * T), g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
     for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {
       const f = at(x, z); if (!f) continue;
       const t = tex(f), ox = t.width > 16 ? ((x & 1) * 16) : 0, oy = t.height > 16 ? ((z & 1) * 16) : 0;
-      g.drawImage(t, ox, oy, 16, 16, (x - x0) * 16, (z - z0) * 16, 16, 16);
+      g.drawImage(t, ox, oy, 16, 16, (x - x0 + M) * T, (z - z0 + M) * T, T, T);
     }
-    this.groundTex = texOf(c);
-    this.book(x0, z0, x1, z1);
+    if (deco) {
+      if (deco.kind) inkWash(g, W, H, (x, z) => deco.kind(x + x0, z + z0), M * T, M * T, T, W * 7 + H);
+      // the 回紋 border runs round the margin, 3/4 of a tile outside the map; seals at two corners
+      const b0 = Math.round(M * T - 1.25 * T), b1x = Math.round((W + M) * T + 1.25 * T), b1y = Math.round((H + M) * T + 1.25 * T);
+      fretBorder(g, b0, b0, b1x, b1y, 8);
+      g.imageSmoothingEnabled = false;
+      if (deco.seal) { const sc = sealCanvas(deco.seal, 22, 'white', W + H); g.drawImage(sc, b1x - 30, b1y - 30); }
+      if (deco.small) { const sc = sealCanvas(deco.small, 14, 'red', W * 3 + H); g.drawImage(sc, b0 + 4, b0 + 4); }
+    }
+    this.groundTex = texOf(c, { nearest: false });
+    this.book(x0, z0, x1, z1, M);
   }
   // the open book: the page (with the print on it), the stacked page edges, the cover and the table round it
-  book(x0, z0, x1, z1) {
+  book(x0, z0, x1, z1, M = 0) {
     const m = 1.5, px0 = x0 - m, pz0 = z0 - m, px1 = x1 + m, pz1 = z1 + m, cx = (px0 + px1) / 2, cz = (pz0 + pz1) / 2, W = px1 - px0, H = pz1 - pz0;
-    const gm = new THREE.ShaderMaterial({ uniforms: { ...this.U, uMap: { value: this.groundTex }, uPrint: { value: new THREE.Vector4(x0, z0, x1, z1) }, uPage: { value: new THREE.Vector4(px0, pz0, px1, pz1) }, uGutter: { value: cx }, uInk: { value: new THREE.Color(0xfaf0dc) } }, vertexShader: GROUND_VS, fragmentShader: GROUND_FS });
+    const gm = new THREE.ShaderMaterial({ uniforms: { ...this.U, uMap: { value: this.groundTex }, uPrint: { value: new THREE.Vector4(x0 - M, z0 - M, x1 + M, z1 + M) }, uPage: { value: new THREE.Vector4(px0, pz0, px1, pz1) }, uGutter: { value: cx }, uInk: { value: new THREE.Color(0xfaf0dc) } }, vertexShader: GROUND_VS, fragmentShader: GROUND_FS });
     const pg = new THREE.PlaneGeometry(W, H); pg.rotateX(-Math.PI / 2); const page = new THREE.Mesh(pg, gm); page.position.set(cx, 0, cz); this.group.add(page);
     // page edges: four sides of a box under the page, in one draw
     const T = 0.34, e = 0.08, pos = [], uv = [], idx = [];
@@ -357,16 +419,17 @@ export class View {
       if (c === '~' || c === 'H' || c === 'X') f = 'water';
       else if (f === 'grass' && ((x * 7 + z * 13) % 5 === 0 || Math.sin(x * 0.7) + Math.cos(z * 0.6) > 1.3)) f = 'grass2';
       ground[z].push(f);
-      if (c === '~' && r() < 0.11) this.sprite('wave', x + 0.2 + r() * 0.6, z + 0.35 + r() * 0.5, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: r() < 0.5 });
+      if (c === '~' && (((z % 3) + 3) % 3 === 0 && (((x + (z % 2 ? 3 : 0)) % 6) + 6) % 6 === 0)) this.sprite('wave', x + 0.5, z + 0.6, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: false });
       if (c === 'X') { dyn.rope.push(this.card('plank', x + 0.5, z + 1, 1, 1, { flags: FLAT | NOSHADOW, rep: 1 })); if (x % 2 === 0) this.sprite('sign', x + 0.5, z + 0.95, 0.35, { flags: NOTAB }); }
       if (c === 'H') dyn.chain.push(this.sprite('chain', x + 0.5, z + 0.6, 1.1, { flags: NOTAB }));
       if (c === 'K') dyn.ice.push(this.sprite('icewall', x + 0.5, z + 0.7, 1.2));
-      if (c === 'b') { const n = 1 + (r() < 0.6 ? 1 : 0); for (let i = 0; i < n; i++) this.sprite('bamboo', x + 0.2 + r() * 0.6, z + 0.3 + r() * 0.6, 0.75 + r() * 0.2, { yaw: (r() - 0.5) * 0.3 }); }
-      if (c === 'V') this.sprite('volcanopeak', x + 0.5 + (r() - 0.5) * 0.3, z + 0.7, 1.5 + r() * 0.4, { yaw: (r() - 0.5) * 0.35, flip: r() < 0.5 });
-      if (c === 'f') { const n = 1 + (r() < 0.5 ? 1 : 0); for (let i = 0; i < n; i++) this.sprite('tree', x + 0.2 + r() * 0.6, z + 0.3 + r() * 0.6, 1.05 + r() * 0.25, { yaw: (r() - 0.5) * 0.3 }); }
-      if (c === 'h') { this.sprite('mound', x + 0.3 + r() * 0.2, z + 0.5, 0.85 + r() * 0.25); if (r() < 0.6) this.sprite('mound', x + 0.6 + r() * 0.2, z + 0.85, 0.65 + r() * 0.2); }
-      if (c === 'M') this.sprite('peak', x + 0.5 + (r() - 0.5) * 0.3, z + 0.7, 1.5 + r() * 0.4, { yaw: (r() - 0.5) * 0.35, flip: r() < 0.5 });
-      if (c === 'N') this.sprite('snowpeak', x + 0.5 + (r() - 0.5) * 0.3, z + 0.7, 1.5 + r() * 0.4, { yaw: (r() - 0.5) * 0.35, flip: r() < 0.5 });
+      if (c === 'b') { const n = 1; for (let i = 0; i < n; i++) this.sprite('bamboo', x + 0.5, z + 0.6, 0.75, { yaw: 0 }); }
+      if (c === 'V') this.sprite('volcanopeak', x + 0.5, z + 0.7, 1.5, { yaw: 0, flip: false });
+      if (c === 'f') { const n = 1; for (let i = 0; i < n; i++) { const pine = r() < 0.4; this.sprite(pine ? 'cpine' : 'tree', x + 0.5, z + 0.6, (pine ? 1.45 : 1.05), { yaw: 0, flip: false }); } }
+      if (c === 'h') { this.sprite('chill', x + 0.5, z + 0.5, 0.95, { flip: false }); }
+      if (c === 'M') this.sprite(r() < 0.5 ? 'cmount' : 'cmount2', x + 0.5, z + 0.7, 1.75, { yaw: 0, flip: false });
+      if (c === 'N') this.sprite('csnowmount', x + 0.5, z + 0.7, 1.75, { yaw: 0, flip: false });
+      if (c === '=' && ((rows[z][x - 1] === '~' && rows[z][x + 1] === '~') || ((rows[z - 1] || '')[x] === '~' && (rows[z + 1] || '')[x] === '~'))) this.sprite('cbridge', x + 0.5, z + 0.75, 1.6, { yaw: rows[z][x - 1] === '~' ? Math.PI / 2 : 0, flags: NOSHADOW });
       if (c === 'n' && r() < 0.08) this.sprite('snowpine', x + 0.5, z + 0.6, 1);
       if (c === 's' && r() < 0.03) this.sprite('palm', x + 0.5, z + 0.6, 1);
       if (c === 'w' && r() < 0.1) this.sprite('deadtree', x + 0.5, z + 0.6, 0.9);
@@ -374,7 +437,8 @@ export class View {
     } }
     for (const [x, z, look] of Object.values(places)) this.placeModel(x, z, look);
     for (const [x, z] of signs) this.sprite('sign', x + 0.5, z + 0.6, 0.85);
-    this.printGround(0, 0, Wd, H, (x, z) => ground[z][x]);
+    const WK = { '~': 'water', c: 'water', M: 'mount', N: 'snow', f: 'forest' };
+    this.printGround(0, 0, Wd, H, (x, z) => ground[z][x], { kind: (x, z) => WK[rows[z][x]] || 'land', seal: SEAL_WORLD, small: SEAL_WORLD.slice(0, 2) });
     this.finishPieces(); this.setOpen(open);
     this.camDist = 21 * ZOOM; this.theme({ paper: 0xf3e8cf }); this.dark(false);
   }
@@ -383,7 +447,7 @@ export class View {
   placeModel(x0, z0, look) {
     const L = { town: [['town_b', 1.7, -0.12], ['town_f', 1.8, 0.32]], city: [['city_b', 1.85, -0.12], ['city_f', 1.95, 0.34]], village: [['village_b', 1.65, -0.05], ['village_f', 1.7, 0.34]],
       pavilion: [['pavilion', 1.55, 0.2]], temple: [['temple', 1.75, 0.2]], tower: [['tower', 0.95, 0.2]], fort: [['fort_b', 0.85, -0.15], ['fort_f', 1.85, 0.34]], desertfort: [['desertfort_b', 0.75, -0.2], ['desertfort_f', 1.8, 0.34]],
-      tomb: [['tomb', 1.65, 0.2]], cave: [['cave', 1.65, 0.25]], lair: [['lair', 1.75, 0.2]], grove: [['pine', 1.3, -0.15, -0.4], ['pine', 1.5, 0.05, 0.38], ['pine', 1.2, 0.35, -0.05]],
+      tomb: [['tomb', 1.65, 0.2]], cave: [['cave', 1.65, 0.25]], lair: [['lair', 1.75, 0.2]], grove: [['cpine', 1.6, 0.1]],
       ranch: [['ranch_b', 1.6, -0.1], ['ranch_f', 1.8, 0.34]], port: [['port_b', 1.75, -0.08], ['port_f', 1.8, 0.36]], mansion: [['willow', 0.9, -0.2, -0.6], ['mansion', 1.7, 0.2]], miao: [['bamboo', 0.7, -0.3, 0.7], ['miao', 1.75, 0.2]],
       volcano: [['volcano', 1.9, 0.2]], yurts: [['yurts', 1.8, 0.2]], pagoda: [['pagoda', 1.15, 0.2]], fortress: [['fortress', 1.95, 0.25]], bamboo: [['bambooGrove', 1.6, 0.2]], swampgrove: [['swampGrove', 1.6, 0.2]],
       icecave: [['icecave', 1.65, 0.25]], belltemple: [['belltemple', 1.8, 0.2]] }[look] || [];
@@ -412,40 +476,44 @@ export class View {
       const inside = z >= 0 && z < H && x >= 0 && x < W;
       if (inside && rows[z][x] !== ' ') continue;
       if (!apron) continue;
-      if (apron === '~') { G[key(x, z)] = 'water'; if (r() < 0.12) this.sprite('wave', x + 0.2 + r() * 0.6, z + 0.35 + r() * 0.5, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: r() < 0.5 }); continue; }
+      if (apron === '~') { G[key(x, z)] = 'water'; if ((((z % 3) + 3) % 3 === 0 && (((x + (z % 2 ? 3 : 0)) % 6) + 6) % 6 === 0)) this.sprite('wave', x + 0.5, z + 0.6, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: false }); continue; }
       if (apron === '#') { G[key(x, z)] = theme.wallTop; solid[key(x, z)] = 'wall'; continue; }
       if (apron === 's') { G[key(x, z)] = 'sand'; if (r() < 0.06) this.sprite('palm', x + 0.5, z + 0.6, 1); continue; }
-      if (apron === 'j') { G[key(x, z)] = 'bambooFloor'; if (r() < 0.5) this.sprite('bamboo', x + 0.2 + r() * 0.6, z + 0.3 + r() * 0.5, 0.9 + r() * 0.25); continue; }
-      if (apron === 'n') { G[key(x, z)] = 'snow'; if (r() < 0.25) this.sprite('snowpine', x + 0.3 + r() * 0.4, z + 0.5, 1 + r() * 0.3); continue; }
+      if (apron === 'j') { G[key(x, z)] = 'bambooFloor'; if (r() < 0.5) this.sprite('bamboo', x + 0.5, z + 0.6, 0.9); continue; }
+      if (apron === 'n') { G[key(x, z)] = 'snow'; if (r() < 0.25) this.sprite('snowpine', x + 0.5, z + 0.5, 1); continue; }
       if (apron === 'V') { G[key(x, z)] = 'volcRock'; if (r() < 0.12) this.sprite('rock', x + 0.5, z + 0.6, 0.8); continue; }
       if (apron === 'w') { G[key(x, z)] = 'mud'; if (r() < 0.1) this.sprite('deadtree', x + 0.5, z + 0.6, 0.9); else if (r() < 0.1) this.sprite('reed', x + 0.5, z + 0.6, 0.6); continue; }
       G[key(x, z)] = M.theme === 'forest' ? 'forestFloor' : 'grass';
-      if (r() < (M.theme === 'forest' ? 0.75 : 0.45)) this.sprite('tree', x + 0.2 + r() * 0.6, z + 0.3 + r() * 0.5, 1.1 + r() * 0.3, { yaw: (r() - 0.5) * 0.3 });
+      if (r() < (M.theme === 'forest' ? 0.75 : 0.45)) { const pine = r() < (M.theme === 'forest' ? 0.3 : 0.45); this.sprite(pine ? 'cpine' : 'tree', x + 0.5, z + 0.6, (pine ? 1.5 : 1.1), { yaw: 0, flip: false }); }
     }
     let ci = 0; const tree = M.theme === 'snowpeak' ? 'snowpine' : 'tree';
+    const townish = !theme.card && !M.dark && /town|village|city|temple|pavilion|canal|port|isle|belltemple|fortress|ranch/.test(M.theme), holy = /temple|pavilion|belltemple/.test(M.theme);
+    const TOWNTREES = [['cpine', 1.5], ['cwillow', 1.45], ['cplum', 1.3], ['tree', 1.15], ['cpine', 1.6], ['cbamboo', 1.0]];
     for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
       let c = rows[z][x]; if (c === ' ') continue;
       if (/[A-Z]/.test(c)) c = M.floor || '.';
       const k = key(x, z);
-      if (c === '~') { G[k] = 'water'; if (r() < 0.16) this.sprite('wave', x + 0.2 + r() * 0.6, z + 0.35 + r() * 0.5, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: r() < 0.5 }); continue; }
+      if (c === '~') { G[k] = 'water'; if ((((z % 3) + 3) % 3 === 0 && (((x + (z % 2 ? 3 : 0)) % 6) + 6) % 6 === 0)) this.sprite('wave', x + 0.5, z + 0.6, 0.7, { flags: WAVE | NOTAB, ph: r() * 6.3, flip: false }); continue; }
       if (c === 'v') { G[k] = 'void'; continue; }
       if (c === '#') { G[k] = theme.wallTop; solid[k] = 'wall'; continue; }
       if (c === 'h') { G[k] = 'plasterTop'; solid[k] = 'house'; continue; }
       if (c === 'x' && theme.fortFence) { G[k] = 'palisadeTop'; solid[k] = 'pal'; continue; }
       G[k] = floorOf(c);
-      const cx = x + 0.5, yaw = (r() - 0.5) * 0.25;
-      if (c === '"' && M.theme === 'forest') { G[k] = 'leafTop'; solid[k] = 'hedge'; if (r() < 0.22) this.sprite('tree', cx, z + 0.45, 0.9 + r() * 0.3, { y: 0.8, flags: NOSHADOW | NOTAB }); }
-      else if (c === '"') this.sprite(tree, cx, z + 0.55, 1.15 + r() * 0.2, { yaw });
+      const cx = x + 0.5, yaw = 0;
+      if (c === '"' && M.theme === 'forest') { G[k] = 'leafTop'; solid[k] = 'hedge'; if (r() < 0.22) this.sprite('tree', cx, z + 0.45, 0.9, { y: 0.8, flags: NOSHADOW | NOTAB }); }
+      else if (c === '"' && townish) { const [nm, w] = TOWNTREES[Math.floor(r() * TOWNTREES.length)]; this.sprite(nm, cx, z + 0.55, w, { yaw, flip: false }); }
+      else if (c === '"') this.sprite(tree, cx, z + 0.55, 1.15, { yaw });
       else if (c === '%') this.sprite('bush', cx, z + 0.6, 0.9, { yaw });
       else if (c === 'p') this.sprite('pot', cx, z + 0.6, 0.7, { yaw });
-      else if (c === 'r') this.sprite('rock', cx, z + 0.6, 0.85, { yaw });
-      else if (c === 'u') this.sprite('statue', cx, z + 0.5, 0.9);
+      else if (c === 'r') this.sprite(townish ? 'crock' : 'rock', cx, z + 0.6, 0.85, { yaw });
+      else if (c === 'u') this.sprite(townish && !holy ? 'clion' : 'statue', cx, z + 0.5, 0.9);
       else if (c === 'l') this.sprite('lamp', cx, z + 0.5, 0.9);
-      else if (c === '&') { const R0 = this.rects.brazier, bh = R0.ah / R0.aw * 0.7 * this.stretch; this.sprite('brazier', cx, z + 0.5, 0.7); this.sprite('fire', cx, z + 0.52, 0.55, { y: bh * 0.62, flags: GLOW | NOSHADOW | NOTAB }); }
+      else if (c === '&' && holy) this.sprite('cincense', cx, z + 0.5, 0.85);
+      else if (c === '&') { const R0 = this.rects.brazier, bh = R0.ah / 16 * this.stretch; this.sprite('brazier', cx, z + 0.5, 0.7); this.sprite('fire', cx, z + 0.52, 0.55, { free: true, y: bh * 0.62, flags: GLOW | NOSHADOW | NOTAB }); }
       else if (c === 'w') this.sprite('well', cx, z + 0.6, 0.9);
-      else if (c === 'j') this.sprite('bamboo', cx + (r() - 0.5) * 0.2, z + 0.55, 0.85 + r() * 0.2, { yaw });
+      else if (c === 'j') this.sprite('bamboo', cx, z + 0.55, 0.85, { yaw });
       else if (c === 'y') { G[k] = 'water'; this.sprite('lotus', cx, z + 0.6, 0.85, { flags: NOTAB }); }
-      else if (c === 'a') { G[k] = 'lava'; if (r() < 0.3) this.sprite('fire', cx, z + 0.6, 0.45, { flags: GLOW | NOSHADOW | NOTAB }); }
+      else if (c === 'a') { G[k] = 'lava'; if (r() < 0.3) this.sprite('fire', cx, z + 0.6, 0.45, { free: true, flags: GLOW | NOSHADOW | NOTAB }); }
       else if (c === '$') this.sprite('yurt', cx, z + 0.7, 1.4);
       else if (c === '!') this.sprite('banner', cx, z + 0.55, 0.6);
       else if (c === '*') this.sprite('crystal', cx, z + 0.6, 0.7, { flags: GLOW });
@@ -470,7 +538,7 @@ export class View {
     // walls, houses and palisades: a card on the south edge of every tile (cut-outs stood one behind another), merged
     // along each row; the front one shows the wall (a house gets a roof flap), the ones behind show the top; and side
     // planes where a block ends
-    const KIND = { wall: { h: theme.wallH || 1, face: theme.wall, back: theme.wallTop }, house: { h: 0.85, face: 'plaster', back: 'roofRed', lid: 'roofRed' }, pal: { h: 0.9, face: 'palisade', back: 'palisadeTop' }, hedge: { h: 0.8, face: 'leafSide', back: 'leafTop' } };
+    const KIND = { wall: { h: theme.wallH || 1, face: theme.wall, back: theme.wallTop }, house: { h: 0.85, face: 'plaster', back: 'roofTile', lid: 'roofTile' }, pal: { h: 0.9, face: 'palisade', back: 'palisadeTop' }, hedge: { h: 0.8, face: 'leafSide', back: 'leafTop' } };
     const at = (x, z) => solid[key(x, z)];
     for (let z = z0; z < z1; z++) {
       let x = x0;
@@ -480,7 +548,13 @@ export class View {
         while (e < x1 && at(e, z) === kd && (at(e, z + 1) !== kd) === front) e++;
         const K = KIND[kd], n = e - x;
         // houses: the facade with a roof flap, roof layers behind; walls, hedges, palisades: box pop-ups (a face with a lid)
-        if (kd === 'house') { if (front) this.card(K.face, (x + e) / 2, z + 1, n, K.h, { lid: K.lid, d: 0.55, la: 1.05, rep: n }); else this.card(K.back, (x + e) / 2, z + 1, n, K.h, { rep: n }); }
+        if (kd === 'house') {
+          if (front) {
+            this.card(K.face, (x + e) / 2, z + 1, n, K.h, { lid: K.lid, d: 0.55, la: 1.05, rep: n });
+            this.sprite('ceave', x - 0.12, z + 1.02, 0.42, { y: K.h - 0.1, flags: NOTAB | NOSHADOW }); this.sprite('ceave', e + 0.12, z + 1.02, 0.42, { y: K.h - 0.1, flip: true, flags: NOTAB | NOSHADOW });
+            if (townish) for (let q = x + 1; q < e - 0.5; q += 3) this.sprite('clantern', q + 0.5, z + 1.06, 0.3, { y: K.h - 0.42, flags: NOTAB | NOSHADOW });
+          } else this.card(K.back, (x + e) / 2, z + 1, n, K.h, { rep: n });
+        }
         else this.card(K.face, (x + e) / 2, z + 1, n, K.h, { lid: K.back, d: 1, rep: n, flags: (front ? 0 : NORIM) | NOLIDRIM });
         x = e;
       }
@@ -495,7 +569,9 @@ export class View {
         z = e;
       }
     }
-    this.printGround(x0, z0, x1, z1, (x, z) => G[key(x, z)] || null);
+    const light = !theme.card && !M.dark, nm = (M.name && (M.name.zh || M.name[0])) || '';
+    const FK = { water: 'water', forestFloor: 'forest', leafTop: 'forest', bambooFloor: 'forest', void: null, chasm: null };
+    this.printGround(x0, z0, x1, z1, (x, z) => G[key(x, z)] || null, light ? { kind: (x, z) => { const f = G[key(x, z)]; return f ? (f in FK ? FK[f] : 'land') : null; }, seal: nm.slice(0, 4), small: null } : null);
     this.finishPieces();
     this.refresh(state);
     this.camDist = (M.town ? 16 : 15) * ZOOM;
@@ -522,7 +598,7 @@ export class View {
     this.isDark = on; this.hasLantern = !!lantern; const U = this.U;
     if (on) { U.uAmb.value.setHex(0x282830); U.uLampCol.value.setHex(0x000000); U.uLantern.value.w = lantern ? 1.5 : 0.7; U.uLanternR.value = lantern ? 10.5 : 5; }
     else U.uLantern.value.w = 0;
-    U.uFog.value.set(on ? (this.camDist || 15) - 4 : 10, on ? (this.camDist || 15) + (lantern ? 7 : 3) : 20, on ? 1 : 0);
+    const cd = (this.camDist || 15) * TELE; U.uFog.value.set(on ? cd - 4 : 10, on ? cd + (lantern ? 7 : 3) : 20, on ? 1 : 0);
     for (const [m, c] of this.envMats || []) m.color.setHex(c).multiplyScalar(on ? 0.06 : 1);
   }
 
@@ -544,7 +620,7 @@ export class View {
         let t = 0;
         if (!this.fold && !(P.flags[i] & FLAT)) {
           // project both ends of the card: a long wall pops up as soon as any of it is in view
-          const y = P.cy[i], m = P.tgt[i] ? 1.06 : 0.94;   // a little hysteresis so pieces on the border don't flicker up and down
+          const y = P.cy[i], m = P.tgt[i] ? 1.14 : 0.98;   // hysteresis: up at the edge of the view, folded only well outside it, so pieces on the border never flicker up and down
           let lo = 9, hi = -9, ylo = 9, yhi = -9;
           for (let s2 = -1; s2 <= 1; s2 += 2) {
             const x = P.cx[i] + P.hx[i] * s2, z = P.cz[i] + P.hz[i] * s2, w = e[3] * x + e[7] * y + e[11] * z + e[15];
@@ -557,6 +633,7 @@ export class View {
         if (t !== P.tgt[i] || (entry && t)) {
           P.tgt[i] = t;
           P.delay[i] = entry ? Math.hypot(P.cx[i] - fx, P.cz[i] - fz) * (0.022 / ZOOM) + Math.random() * 0.05 : t ? Math.random() * 0.06 : 0;
+          P.dmp[i] = entry ? DAMP : DAMP_EDGE;
           if (!P.act[i]) { P.act[i] = 1; P.active.push(i); }
         }
       }
@@ -566,7 +643,7 @@ export class View {
     for (let k = L.length - 1; k >= 0; k--) {
       const i = L[k];
       if (P.delay[i] > 0) { P.delay[i] -= dt; continue; }
-      const t = P.tgt[i]; let v = P.vel[i] + (STIFF * (t - rise[i]) - DAMP * P.vel[i]) * dt, x = rise[i] + v * dt;
+      const t = P.tgt[i]; let v = P.vel[i] + (STIFF * (t - rise[i]) - P.dmp[i] * P.vel[i]) * dt, x = rise[i] + v * dt;
       if (x < 0) { x = 0; v = -v * 0.25; }
       if (Math.abs(t - x) < 0.003 && Math.abs(v) < 0.03) { x = t; v = 0; P.act[i] = 0; L[k] = L[L.length - 1]; L.pop(); }
       rise[i] = x; P.vel[i] = v;
@@ -578,10 +655,10 @@ export class View {
   frame(dt, focus) {
     this.time += dt; this.U.uTime.value = this.time;
     const portrait = this.aspect < 1;
-    const base = this.camDist || 15; const dist = portrait ? base * 1.05 : base, el = portrait ? 0.95 : 0.86;      // camera distance and elevation angle
+    const base = (this.camDist || 15) * TELE; const dist = portrait ? base * 1.05 : base, el = portrait ? 0.95 : 0.86;      // camera distance and elevation angle
     const want = this._want || (this._want = new THREE.Vector3()); want.set(focus.x, 0, focus.z);
     if (!this.camReady) { this.cam.copy(want); this.camReady = true; this.recheck = true; } else this.cam.lerp(want, Math.min(1, dt * 8));
-    const c = this.camera; const fov = portrait ? 38 : 30; if (c.fov !== fov) { c.fov = fov; c.updateProjectionMatrix(); }
+    const c = this.camera; const fov = portrait ? 23 : 18; if (c.fov !== fov) { c.fov = fov; c.updateProjectionMatrix(); }
     c.position.set(this.cam.x, this.cam.y + Math.sin(el) * dist, this.cam.z + Math.cos(el) * dist); c.lookAt(this.cam.x, 0.3, this.cam.z);
     this.updatePieces(dt);
     let busy = false; for (const a of this.actors.values()) busy = a.tick(dt) || busy;
@@ -711,7 +788,7 @@ class Actor {
     const img = SHEETS[f[5] || L.sheet]; const W = this.cw, H = this.ch; const c = canvasOf(W, H); const x = c.getContext('2d');
     if (img) { x.imageSmoothingEnabled = false; const flip = f[4]; if (flip) { x.translate(W, 0); x.scale(-1, 1); } x.drawImage(img, f[0], f[1], f[2], f[3], Math.floor((W - f[2]) / 2), H - f[3], f[2], f[3]);
       const lg = f[6]; if (lg) { const n = lg.rows, dx = Math.floor((W - f[2]) / 2); x.clearRect(dx, H - n, f[2], n); if (lg.mirror) { x.save(); x.translate(2 * dx + f[2], 0); x.scale(-1, 1); } x.drawImage(img, lg.x, lg.y + f[3] - n, f[2], n, dx, H - n, f[2], n); if (lg.mirror) x.restore(); } }
-    return (this.cache[k] = texOf(dieCut(c, 4, 6, 5)));
+    return (this.cache[k] = texOf(dieCut(c, 4, 6, 5), { nearest: false }));
   }
   set(dir, i) {
     this.dir = dir; this.fi = i;
@@ -732,7 +809,7 @@ class Actor {
     if (!this.moved) { const f = this.walk % 1; if (f > 0) this.walk = Math.min(Math.ceil(this.walk), this.walk + dt * 6); }
     this.moved = false;
     const f = this.walk % 1, hop = Math.sin(f * Math.PI), sgn = Math.floor(this.walk) % 2 ? 1 : -1;
-    const P = this.A.pos.array, y = this.y + hop * 0.09, rl = hop * 0.1 * sgn;
+    const P = this.A.pos.array, y = this.y + hop * 0.09, rl = 0 * sgn;
     if (P[0] !== this.x || P[1] !== y || P[2] !== this.z) { P[0] = this.x; P[1] = y; P[2] = this.z; this.A.pos.needsUpdate = true; }
     if (this.A.roll.array[0] !== rl) { this.A.roll.array[0] = rl; this.A.roll.needsUpdate = true; }
     if (this.A.rise.array[0] !== this.rise) { this.A.rise.array[0] = this.rise; this.A.rise.needsUpdate = true; }

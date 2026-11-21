@@ -7,18 +7,19 @@
 // on the target's card (boxed by blinking corner marks), which flashes, recoils on its hinge and sheds paper scraps,
 // and the number pops up on a paper tag over the card that was hit - cream for a foe, red for one of the party.
 // Effects come from pools filled once per battle, so the 60 fps loop allocates nothing.
-import { ENEMIES, SKILLS, ITEMS, ART_OF, SPECIES, CHARS } from './data.js?v=5';
-import { ENEMY_ART } from './enemy_art.js?v=5';
-import { CAST, PEOPLE, PEOPLE_IMAGE } from './people_art.js?v=5';
-import * as R from './rules.js?v=5';
-import { t, STR, getLang } from './ui.js?v=5';
-import { hex, NES } from './tiles.js?v=5';
-import { dieCut, grainCanvas } from './paper.js?v=5';
+import { ENEMIES, SKILLS, ITEMS, ART_OF, SPECIES, CHARS } from './data.js?v=6';
+import { ENEMY_ART } from './enemy_art.js?v=6';
+import { CAST, PEOPLE, PEOPLE_IMAGE } from './people_art.js?v=6';
+import * as R from './rules.js?v=6';
+import { t, STR, getLang } from './ui.js?v=6';
+import { hex, NES } from './tiles.js?v=6';
+import { dieCut, grainCanvas } from './paper.js?v=6';
+import { inkLandscape } from './ink.js?v=6';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const imgs = {};
 function img(src) { if (!imgs[src]) { imgs[src] = new Image(); imgs[src].src = src; } return imgs[src]; }
-export const ENEMY_IMG = 'assets/enemies.png?v=5';
+export const ENEMY_IMG = 'assets/enemies.png?v=6';
 export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } }
 
 const SCENES = {   // backdrop strip colours (NES indexes): sky, far, near
@@ -79,23 +80,19 @@ const mixc = (a, b, f) => { const A = NES[a], r = (A >> 16 & 255) * (1 - f) + (b
 let GRAIN = null;
 const FLOOR = 56;   // where the page's floor card begins (the foes stand on it)
 function scenery(scene) {
-  const c = document.createElement('canvas'); c.width = SW * 3; c.height = SH * 3; const g = c.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0);
-  const PAP = 0xf3e8cf;
-  g.fillStyle = mixc(scene[0], PAP, 0.42); g.fillRect(0, 0, SW, FLOOR + 10);
-  const ridge = (y0, a1, f1, a2, f2, ph, col, shadow) => {
-    const path = () => { g.beginPath(); g.moveTo(0, FLOOR + 12); for (let x = 0; x <= SW; x += 2) g.lineTo(x, y0 + Math.round(Math.sin(x * f1 + ph) * a1 + Math.sin(x * f2 + ph * 2) * a2)); g.lineTo(SW, FLOOR + 12); g.closePath(); };
-    g.save(); g.translate(1.5, 1.5); g.fillStyle = shadow; path(); g.fill(); g.restore();
-    g.fillStyle = '#fffaf0'; g.save(); g.translate(0, -1); path(); g.fill(); g.restore();
-    g.fillStyle = col; path(); g.fill();
-  };
-  ridge(30, 6, 0.05, 2, 0.17, 0.3, mixc(scene[1], PAP, 0.3), 'rgba(40,25,10,0.25)');
-  ridge(42, 3, 0.09, 2, 0.21, 1.7, mixc(scene[2], PAP, 0.22), 'rgba(40,25,10,0.3)');
-  g.fillStyle = 'rgba(40,25,10,0.35)'; g.fillRect(0, FLOOR - 1, SW, 2);
-  g.fillStyle = mixc(scene[2], 0x2a2018, 0.62); g.fillRect(0, FLOOR, SW, SH - FLOOR);
-  g.fillStyle = '#fffaf0'; g.fillRect(0, FLOOR - 1, SW, 1);
-  try {
+  const c = document.createElement('canvas'); c.width = SW * 3; c.height = SH * 3; const g = c.getContext('2d');
+  const s = document.createElement('canvas'); s.width = SW; s.height = SH; const q = s.getContext('2d');
+  const rgb = (i) => [NES[i] >> 16 & 255, NES[i] >> 8 & 255, NES[i] & 255];
+  inkLandscape(q, { sky: rgb(scene[0]), far: rgb(scene[1]), near: rgb(scene[2]) }, scene[0] * 7 + scene[1] * 3 + scene[2], SW, FLOOR);
+  // the floor of the page the foes stand on: a darker card with a white cut edge, brushed with a few ink strokes
+  q.fillStyle = 'rgba(40,25,10,0.35)'; q.fillRect(0, FLOOR - 1, SW, 2);
+  q.fillStyle = mixc(scene[2], 0x2a2018, 0.62); q.fillRect(0, FLOOR, SW, SH - FLOOR);
+  q.fillStyle = 'rgba(0,0,0,0.16)'; for (let i = 0; i < 9; i++) { const y = FLOOR + 6 + ((i * 37) % (SH - FLOOR - 10)), x = (i * 53) % SW, w = 18 + (i * 13) % 30; q.fillRect(x, y, w, 1); q.fillRect(x + 3, y + 1, w - 8, 1); }
+  q.fillStyle = '#fffaf0'; q.fillRect(0, FLOOR - 1, SW, 1);
+  g.imageSmoothingEnabled = false; g.drawImage(s, 0, 0, SW * 3, SH * 3);
+  try {   // paper grain over everything
     if (!GRAIN) GRAIN = grainCanvas(128, 31);
-    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.55;
+    g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.5;
     for (let y = 0; y < SH * 3; y += 128) for (let x = 0; x < SW * 3; x += 128) g.drawImage(GRAIN, x, y);
     g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
   } catch (e) {}

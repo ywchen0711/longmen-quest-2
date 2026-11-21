@@ -16,6 +16,7 @@ text or interface art.
   colours (`tools/people.py`, `js/doll.js`, `js/tiles.js`).
 - **The pop-up book:** drawn in code (`js/paper.js`, `js/view.js`, `style.css`).
 
+- **The Chinese storybook look (pines, plum, willows, bamboo, Taihu rocks, stone lions, lanterns, pagodas, paifang, arched bridges, blue-green mountains, white walls and dark tiles, ink washes, the fret border, seals, the thread-bound cover, ink-wash battle backdrops):** drawn in code from NES palette colours, no image files and no outside assets (`js/ink.js`). Headings use the device's own Kai/Song fonts when present.
 ## Music and sound (original)
 - **Soundtrack:** composed for this game (the score is `tools/music.py`) and played by recorded instruments with the
   game's own sampler and mixer, `tools/orch.py` (arrangement, added pads and percussion, reverb and mastering made

@@ -1,18 +1,21 @@
 // Boot: build the view, the title screen, the opening, and run the fixed-timestep loop.
-import { View, pickQuality, loadImage, registerSheet } from './view.js?v=5';
-import { Input } from './input.js?v=5';
-import { UI, t, STR, getLang, setLang } from './ui.js?v=5';
-import { Audio } from './audio.js?v=5';
-import { Game, mapName } from './game.js?v=5';
-import { CAST, PEOPLE_IMAGE } from './people_art.js?v=5';
-import { preloadBattleArt, ENEMY_IMG } from './battle.js?v=5';
-import { paperTileURL, deckleURL, woodURL } from './paper.js?v=5';
-import { opening as storyOpening } from './story.js?v=5';
+import { View, pickQuality, loadImage, registerSheet } from './view.js?v=6';
+import { Input } from './input.js?v=6';
+import { UI, t, STR, getLang, setLang } from './ui.js?v=6';
+import { Audio } from './audio.js?v=6';
+import { Game, mapName } from './game.js?v=6';
+import { CAST, PEOPLE_IMAGE } from './people_art.js?v=6';
+import { preloadBattleArt, ENEMY_IMG } from './battle.js?v=6';
+import { paperTileURL, deckleURL, woodURL } from './paper.js?v=6';
+import { fretFrameURL, sealURL, brushURL } from './ink.js?v=6';
+import { opening as storyOpening } from './story.js?v=6';
 
 const params = new URLSearchParams(location.search);
 const NORENDER = params.has('norender');
 setLang(getLang());
-{ const st = document.documentElement.style; st.setProperty('--grain', `url(${paperTileURL()})`); st.setProperty('--deckle', `url(${deckleURL()})`); st.setProperty('--wood', `url(${woodURL()})`); }
+{ const st = document.documentElement.style; st.setProperty('--grain', `url(${paperTileURL()})`); st.setProperty('--deckle', `url(${deckleURL()})`); st.setProperty('--wood', `url(${woodURL()})`);
+  // the Chinese dressing: a vermilion 回紋 frame for the windows, the game's seal, a dry-brush underline
+  st.setProperty('--deckle', `url(${fretFrameURL()})`); st.setProperty('--seal', `url(${sealURL('萬妖', 20)})`); st.setProperty('--brush', `url(${brushURL()})`); }
 
 const input = new Input(), audio = new Audio();
 const ui = new UI(document.getElementById('ui'), input, audio);
@@ -80,6 +83,7 @@ function loop(now) {
       if (++slow > 120) {
         slow = 0; fps = 60;
         if (!view.prCap) { view.prCap = 1; view.resize(); }
+        else if (view.dropMSAA()) { /* stepped down */ }
         else if (view.post) { view.post = false; view.composer = null; }
         else if (!view.cheap) view.setCheap();
       }
@@ -120,6 +124,7 @@ async function openCover(toPage) {
   tl.classList.add('hidden'); tl.classList.remove('open', 'gone');
 }
 function drawTitle() {
+  document.getElementById('title').classList.toggle('en', getLang() !== 'zh');
   document.getElementById('tname').textContent = t(['龍門刀客傳', 'Longmen Quest']);
   document.getElementById('tnum').textContent = t(['貳', 'II']);
   document.getElementById('tsub').textContent = t(['萬妖鈴', 'The Bell of Ten Thousand Beasts']);

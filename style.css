@@ -68,7 +68,7 @@ body { font-family: 'Cubic11', 'PingFang TC', 'Microsoft JhengHei', monospace; f
 .bookwin { left: 4%; top: 6%; bottom: 3%; width: 50%; z-index: 9; display: flex; flex-direction: column; gap: 0.4em; overflow: hidden; }
 .bkpic { flex: none; height: calc(66px * var(--pz)); display: flex; align-items: flex-end; justify-content: center; }
 .bkpic img { width: calc(48px * var(--pz)); height: calc(56px * var(--pz)); image-rendering: pixelated; border: calc(var(--bd) + 1px) solid #fffdf6; box-shadow: 2px 3px 4px rgba(40, 25, 10, 0.35); transform: rotate(2deg); }
-.bkspr { flex: none; background-image: url(assets/enemies.png?v=5); image-rendering: pixelated; transform: scale(var(--pz)); transform-origin: 50% 100%; filter: drop-shadow(1px 0 0 #fffdf6) drop-shadow(-1px 0 0 #fffdf6) drop-shadow(0 1px 0 #fffdf6) drop-shadow(0 -1px 0 #fffdf6); }
+.bkspr { flex: none; background-image: url(assets/enemies.png?v=6); image-rendering: pixelated; transform: scale(var(--pz)); transform-origin: 50% 100%; filter: drop-shadow(1px 0 0 #fffdf6) drop-shadow(-1px 0 0 #fffdf6) drop-shadow(0 1px 0 #fffdf6) drop-shadow(0 -1px 0 #fffdf6); }
 .bkname { color: var(--red); }
 .bkmeta { color: var(--sub); font-size: 0.85em; }
 .bkbio { margin: 0.2em 0; font-size: 0.9em; }
@@ -287,3 +287,49 @@ div.mpic.bust { margin-bottom: calc((var(--pz) - 1) * 56px); }
 .chapt { color: var(--red); font-size: calc(var(--fs) * 2.6); letter-spacing: 0.3em; margin: 0.2em 0; }
 .chape { color: var(--sub); }
 .endpor img { margin: 0 calc(var(--fs) * 0.2); }
+
+/* ---------------------------------------------------------------- 水墨 / 線裝: the Chinese storybook dressing (shared by both games)
+   the windows keep their paper but get a vermilion double rule with 回紋 corner hooks (--deckle is drawn by ink.js),
+   headings get a dry-brush underline, menus a red seal, the message note a red Chinese knot, place names a brush hand */
+:root { --kai: 'Kaiti TC', 'STKaiti', 'KaiTi', 'DFKai-SB', 'BiauKai', 'Songti TC', 'STSong', 'SimSun', 'PMingLiU', serif; }
+.menu::before { top: calc(var(--fs) * -0.95); left: auto; right: calc(var(--fs) * -0.95); width: calc(var(--fs) * 1.3); height: calc(var(--fs) * 1.3); margin-left: 0;
+  background: var(--seal) center / contain no-repeat; image-rendering: pixelated; transform: rotate(7deg); box-shadow: none; opacity: 0.92; }
+.mtitle, .stname, .bkname, .cluehead, .cluewin .cluehead { background: var(--brush) no-repeat 50% 100% / 100% 0.36em; padding-bottom: 0.18em; }
+.menu .mtitle { display: table; margin-left: auto; margin-right: auto; padding-left: 0.4em; padding-right: 0.4em; }
+.mname { display: inline-block; background: var(--brush) no-repeat 0 100% / 100% 0.3em; padding: 0 0.3em 0.12em 0; }
+/* the message note hangs from a red cord with a Chinese knot (中國結) instead of a paper clip */
+.msg::before { top: calc(var(--fs) * -1.25); right: calc(var(--fs) * 1.55); width: 2px; height: calc(var(--fs) * 1.5); border: 0; border-radius: 0; background: #a52a1a; transform: none; box-shadow: none; }
+.msg::after { top: calc(var(--fs) * -1.05); right: calc(var(--fs) * 1.2); width: calc(var(--fs) * 0.62); height: calc(var(--fs) * 0.62); border: 2px solid #7a1a10; border-radius: 2px; transform: rotate(45deg);
+  background: #c0331f repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 5px); box-shadow: 1px 2px 1px rgba(40, 25, 10, 0.3); }
+/* place names: a brush hand and a seal */
+.banner { font-family: var(--kai); font-size: calc(var(--fs) * 1.25); letter-spacing: 0.15em; padding-right: calc(0.6em + var(--fs) * 1.2); }
+.banner::after { content: ''; position: absolute; right: calc(var(--fs) * 0.25); top: 50%; width: calc(var(--fs) * 1.05); height: calc(var(--fs) * 1.05); margin-top: calc(var(--fs) * -0.52); background: var(--seal) center / contain no-repeat; image-rendering: pixelated; }
+.credits h2, .credits h3, .fin { font-family: var(--kai); letter-spacing: 0.1em; }
+/* the opening and ending pages: a 回紋 frame round the printed page */
+#ending::before { content: ''; position: absolute; inset: 3.5%; border: calc(var(--fs) * 0.62) solid transparent; border-image: var(--deckle) 24 / calc(var(--fs) * 0.62) / 0 round; pointer-events: none; opacity: 0.85; }
+
+/* ---------------------------------------------------------------- the title: a thread-bound (線裝) book in an indigo cover */
+.cfront { background-color: #1f2a40;
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.42), rgba(255, 255, 255, 0.06) 4%, rgba(0, 0, 0, 0) 9%, rgba(0, 0, 0, 0) 93%, rgba(0, 0, 0, 0.25)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, rgba(0, 0, 0, 0) 1px 3px), var(--grain); }
+/* the stitching down the spine: holes, the thread across to the edge, and the thread along it */
+.cfront::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8%; pointer-events: none; z-index: 1;
+  background:
+    radial-gradient(circle at 72% 50%, #090e18 0 3px, rgba(0, 0, 0, 0) 3.6px) 0 3% / 100% 19% repeat-y,
+    linear-gradient(180deg, rgba(0, 0, 0, 0) calc(50% - 1.5px), #ece2c8 calc(50% - 1.5px) calc(50% + 1.5px), rgba(0, 0, 0, 0) calc(50% + 1.5px)) 0 3% / 72% 19% repeat-y,
+    linear-gradient(90deg, rgba(0, 0, 0, 0) 14%, #ece2c8 14% 24%, rgba(0, 0, 0, 0) 24%); }
+/* the title slip (題簽): a paper label with the name written downward, and the seal at its foot */
+.cframe { inset: 6% 8% auto auto; width: 25%; height: 66%; border: 2px solid #b9a072; background: #efe4c8 var(--grain); box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.45);
+  flex-direction: row-reverse; align-items: flex-start; justify-content: center; padding: 9% 0 0; gap: 0.15em; }
+.cframe::before { inset: 4px; border: 1px solid rgba(140, 100, 50, 0.55); }
+.cframe::after { content: ''; position: absolute; left: 50%; bottom: 3.5%; width: calc(var(--fs) * 1.7); height: calc(var(--fs) * 1.7); margin-left: calc(var(--fs) * -0.85); background: var(--seal) center / contain no-repeat; image-rendering: pixelated; }
+#tname { writing-mode: vertical-rl; font-family: var(--kai); font-size: calc(var(--fs) * 2.05); letter-spacing: 0.06em; color: #1d1a16; text-shadow: none; line-height: 1.05; }
+#tsub { writing-mode: vertical-rl; font-family: var(--kai); font-size: calc(var(--fs) * 0.95); color: #8a2a18; padding-top: 1.6em; }
+#tnum { writing-mode: vertical-rl; font-family: var(--kai); color: #b5361f; text-shadow: none; font-size: calc(var(--fs) * 1.6); margin: 0; padding-top: 0.6em; }
+.cemb { position: absolute; right: 150%; bottom: -12%; margin: 0; }
+.cemb img { transform: rotate(-4deg); }
+/* English: the slip lies across the cover */
+#title.en .cframe { width: 66%; height: auto; flex-direction: column; align-items: center; padding: 5% 3% calc(var(--fs) * 2.4); }
+#title.en #tname, #title.en #tsub, #title.en #tnum { writing-mode: horizontal-tb; padding-top: 0; text-align: center; }
+#title.en #tname { font-size: calc(var(--fs) * 1.7); }
+#title.en .cemb { position: static; margin-top: 0.5em; }
