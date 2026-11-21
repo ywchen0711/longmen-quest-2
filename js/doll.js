@@ -7,7 +7,7 @@
 // Pure functions on index grids (no DOM), so the game builds a sheet once per change of gear and a test can run it.
 import { SPRITE, PORTRAIT } from './doll_base.js?v=6';
 
-export const K = 0x0F, SKIN = 0x37, BLUE = 0x12;
+export const K = 0x0F, SKIN = 0x37, BLUE = 0x12, SHADE = 0x02, BAND = 0x21;   // robe, its shade, headband (gallery nes art)
 const W = 16, H = 24;
 const dark = (c) => (c >= 0x10 ? c - 0x10 : 0x0F);
 const light = (c) => (c < 0x30 ? c + 0x10 : 0x30);
@@ -40,12 +40,9 @@ function line(p, w, x0, y0, x1, y1, c, under) {
 
 // ---------------------------------------------------------------- the pieces, per view (down = front, side faces right, up = back)
 // his ring-pommel saber shows as the ring over his shoulder; other weapons take its place
-const RING = {
-  down: [[1, 9], [0, 10], [1, 10], [2, 10], [0, 11], [1, 11], [2, 11]],
-  side: [[2, 11], [3, 11], [4, 11], [2, 12], [3, 12], [4, 12]],
-  up: [[13, 10], [14, 10], [15, 10], [12, 11], [13, 11], [14, 11], [15, 11]],
-};
-const RING_HOLE = { down: [[1, 10]], side: [[3, 11], [3, 12]], up: [[14, 10]] };
+// (the field sprite shows the ring only from behind, at his right shoulder)
+const RING = { down: [], side: [], up: [[14, 10], [13, 11], [14, 11], [15, 11], [14, 12]] };
+const RING_HOLE = { down: [], side: [], up: [[14, 11]] };
 const WEAPON = {
   // a jian: pommel, grip and a crossguard over the shoulder; on his back the scabbard runs down the old strap
   sword: {
@@ -132,11 +129,12 @@ export function dressView(view, frame, looks) {
   if (looks.a) {
     const A = looks.a, b = A.b ?? light(A.a);
     for (let y = 11; y < H; y++) for (let x = 0; x < w; x++) {
-      const o = y * w + x; if (p[o] !== BLUE) continue;
+      const o = y * w + x; if (p[o] !== BLUE && p[o] !== SHADE) continue;
+      const sh = p[o] === SHADE, lo = A.a >= 0x10 ? dark(A.a) : A.a;
       if (y <= 17) {
         const pt = A.p === 'chain' ? (x + y) % 2 === 0 : A.p === 'scale' ? (y % 2 === 0 && x % 2 === 0) || (y % 2 === 1 && x % 2 === 1 && x % 4 === 1) : A.p === 'trim' ? (p[o - 1] === K || p[o + 1] === K) : false;
-        p[o] = pt ? b : A.a;
-      } else if (A.t != null) p[o] = A.t;
+        p[o] = sh ? lo : pt ? b : A.a;
+      } else if (A.t != null) p[o] = sh && A.t >= 0x10 ? dark(A.t) : A.t;
     }
   }
   if (looks.c) { const C = looks.c; if (C.f === 'mirror') run(MIRROR[view], C); else { for (const [x, y] of BRACER[view]) { const o = y * w + x; if (p[o] >= 0 && p[o] !== K && p[o] !== SKIN) p[o] = C.a; } } }
@@ -148,22 +146,23 @@ export function dressView(view, frame, looks) {
       const solid = (xx, yy) => xx >= 0 && xx < w && yy >= 0 && yy < H && base()[view][frame][yy * w + xx] >= 0;
       if (solid(x - 1, y) && solid(x + 1, y) && solid(x, y - 1) && (solid(x, y + 1) || y === H - 1 || view === 'side')) p[o] = (y === top && B.b != null) ? B.b : B.a;
     }
-    if (B.f === 'greaves') for (let y = top - 2; y < top; y++) for (let x = 0; x < w; x++) { const o = y * w + x; if (p[o] === BLUE || (looks.a && looks.a.t != null && p[o] === looks.a.t)) p[o] = y === top - 2 ? (B.b ?? light(B.a)) : B.a; }
+    if (B.f === 'greaves') for (let y = top - 2; y < top; y++) for (let x = 0; x < w; x++) { const o = y * w + x; if (p[o] === BLUE || p[o] === SHADE || (looks.a && p[o] === (looks.a.t ?? looks.a.a))) p[o] = y === top - 2 ? (B.b ?? light(B.a)) : B.a; }
   }
   if (looks.ck) run(CLOAK[view].filter((pc) => !pc.under), looks.ck);
   if (looks.pd) run((PENDANT[looks.pd.f] || PENDANT.jade)[view], looks.pd);
   // the head: a band recolours his headband; hats and helmets cover it
   if (looks.hd) {
     const D = looks.hd;
-    if (D.f === 'band' || D.f === 'brow' || D.f === 'crown') for (let y = 0; y < 8; y++) for (let x = 0; x < w; x++) { const o = y * w + x; if (p[o] === BLUE && D.f !== 'crown') p[o] = D.f === 'brow' ? (D.c ?? D.a) : D.a; }
+    if (D.f === 'band' || D.f === 'brow' || D.f === 'crown') for (let y = 2; y < 9; y++) for (let x = 0; x < w; x++) { const o = y * w + x; if (p[o] === BAND && D.f !== 'crown') p[o] = D.f === 'brow' ? (D.c ?? D.a) : D.a; }
+    // hats and helmets hide the headband: the tails at his sides go, the band turns to hair under the brim
+    if (D.f === 'hat' || D.f === 'helm') for (let y = 2; y < 9; y++) for (let x = 0; x < w; x++) { const o = y * w + x; if (p[o] === BAND) p[o] = (x < 3 || x > 12) ? -1 : 0x0C; }
     if (D.f === 'brow') run(HEAD_MORE.brow[view], D);
     if (HEAD[D.f]) run(HEAD[D.f][view], D);
     if (D.f === 'hat' && D.veil) run(HEAD_MORE.veil[view], D);
   }
   // the weapon: his ring-pommel saber as drawn (a dao), or the ring gives way to another weapon
   const wl = looks.w;
-  if (!wl || wl.f !== 'dao') for (const [x, y] of RING[view]) p[y * w + x] = view === 'up' && y === 11 && x === 12 ? K : -1;
-  if (view === 'up' && (!wl || wl.f !== 'dao')) { for (const [x, y] of [[13, 10], [14, 10], [15, 10], [13, 11], [14, 11], [15, 11]]) p[y * w + x] = -1; }
+  if (!wl || wl.f !== 'dao') for (const [x, y] of RING[view]) p[y * w + x] = -1;
   if (wl && wl.f === 'dao' && wl.c != null) recolour(p, w, RING_HOLE[view], null, wl.c);
   if (wl && WEAPON[wl.f]) run(WEAPON[wl.f][view], wl);
   return p;
@@ -186,14 +185,15 @@ export function dressPortrait(looks) {
     }
   }
   const D = looks.hd; if (!D) return p;
-  const band = 0x11, A = D.a, B = D.b ?? light(D.a), C = D.c ?? dark(D.a);
+  const band = 0x21, bandLo = 0x11, A = D.a, B = D.b ?? light(D.a), C = D.c ?? dark(D.a);
   if (D.f === 'band' || D.f === 'brow') {
-    for (let y = 10; y < 17; y++) for (let x = 0; x < w; x++) if (at(x, y) === band) put(x, y, D.f === 'brow' ? (D.c ?? D.a) : A);
+    const top = D.f === 'brow' ? (D.c ?? D.a) : A, lo = top >= 0x10 ? dark(top) : top;
+    for (let y = 12; y < 17; y++) for (let x = 0; x < w; x++) { const c = at(x, y); if (c === band) put(x, y, top); else if (c === bandLo) put(x, y, lo); }
     if (D.f === 'brow') for (let y = 12; y <= 14; y++) for (let x = 21; x <= 26; x++) put(x, y, (y === 12 || x === 21 || x === 26) ? K : B);
     return p;
   }
   // the headband's flying tails go under anything worn on the head
-  for (let y = 10; y < 16; y++) for (let x = 36; x < w; x++) if (at(x, y) === band) put(x, y, K);
+  for (let y = 12; y < 17; y++) for (let x = 0; x < w; x++) if (at(x, y) === band || at(x, y) === bandLo) put(x, y, x >= 38 ? K : 0x0C);
   if (D.f === 'hat') {
     // a cone from the crown down to a wide brim, lit from the left
     for (let y = 0; y <= 13; y++) { const hw = Math.round(2 + y * 1.65); for (let x = 24 - hw; x <= 23 + hw; x++) put(x, y, (x === 24 - hw || x === 23 + hw) ? K : (x < 24 - hw + Math.max(2, hw * 0.45) ? B : A)); }

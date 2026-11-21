@@ -639,8 +639,27 @@ CAST = ['yirui', 'yishuo', 'xiaotian', 'baixian', 'liuhanyan', 'kuchan', 'heixio
         'hubanxian', 'jiabafang', 'wudadan', 'wenduizhang', 'suxiaowan', 'chutiankuo', 'niubaobao', 'mojide', 'huotianxia', 'mowuya', 'aman']
 
 
+def gallery_frames(gid, row, n):
+    """n 16x24 frames from row `row` of a gallery sheet (chars/<gid>/nes/sheet.png)."""
+    im = Image.open(os.path.join(GALLERY, gid, 'nes', 'sheet.png')).convert('RGBA')
+    return [im.crop((16 * i, 24 * row, 16 * i + 16, 24 * row + 24)) for i in range(n)]
+
+
+def npc_frames(cid):
+    """Townsfolk come from the gallery's longmenTown group (tf_<id>, front idle frame); the back views are the
+    walk_up rows of the heroes' sheets. Falls back to the typed grids above if a gallery file is missing."""
+    try:
+        if cid == 'hero_back':
+            return gallery_frames('yirui', 3, 2)
+        if cid == 'yishuo_back':
+            return gallery_frames('yishuo', 3, 2)
+        return gallery_frames('tf_' + cid, 0, 1)
+    except FileNotFoundError:
+        return [sprite_image(f, P[cid][0]) for f in P[cid][1]]
+
+
 def build():
-    imgs = {cid: [sprite_image(f, P[cid][0]) for f in P[cid][1]] for cid in ORDER}
+    imgs = {cid: npc_frames(cid) for cid in ORDER}
     per_row = 10
     cells = [(cid, i) for cid in ORDER for i in range(len(imgs[cid]))]
     W = per_row * 17 - 1
