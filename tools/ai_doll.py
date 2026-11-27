@@ -205,7 +205,9 @@ def pack():
                 col = col.filter(ImageFilter.UnsharpMask(1, 60, 2))
             out = col.convert('RGBA'); out.putalpha(im.getchannel('A').resize(size, Image.LANCZOS))
             return out
-        # (his side base, seed 31, already looks right, the way the map's side views face)
+        if view == 'side':   # painted looking left (eye and nose on the left); the map's side views face right
+            fit0 = fit
+            fit = lambda im: fit0(im).transpose(Image.FLIP_LEFT_RIGHT)
         fit(base_rgba).save(os.path.join(dst, f'{view}_base.webp'), quality=92, method=6)
         for n, im in layers.items():
             fit(im).save(os.path.join(dst, f'{n}_{view}.webp'), quality=92, method=6)

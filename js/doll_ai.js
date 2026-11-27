@@ -13,8 +13,8 @@ const load = (src) => new Promise((res) => { const i = new Image(); i.onload = (
 
 export function preloadDoll() {
   const jobs = [];
-  for (const v of VIEWS) if (DOLL.views[v]) jobs.push(load(`assets/ai/doll/${v}_base.webp?v=1`).then((i) => { imgs[v + '_base'] = i; }));
-  for (const [n, vs] of Object.entries(DOLL.layers)) for (const v of vs) jobs.push(load(`assets/ai/doll/${n}_${v}.webp?v=1`).then((i) => { imgs[n + '_' + v] = i; }));
+  for (const v of VIEWS) if (DOLL.views[v]) jobs.push(load(`assets/ai/doll/${v}_base.webp?v=2`).then((i) => { imgs[v + '_base'] = i; }));
+  for (const [n, vs] of Object.entries(DOLL.layers)) for (const v of vs) jobs.push(load(`assets/ai/doll/${n}_${v}.webp?v=2`).then((i) => { imgs[n + '_' + v] = i; }));
   return Promise.all(jobs).then(() => { ready = VIEWS.every((v) => !DOLL.views[v] || imgs[v + '_base']); });
 }
 export const dollReady = () => ready;

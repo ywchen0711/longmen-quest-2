@@ -20,14 +20,14 @@ import { AI_MAP } from './ai_art.js?v=8';
 // The AI-painted cards (assets/ai/map, front | side | back, 160 x 180 each), by Character Gallery id. A painted
 // card carries res: its pixels per stage pixel, so it stands as tall as the pixel art it replaces, drawn smoothed.
 const gidOf = (s) => (CAST[s] ? s : (ENEMIES[s] ? ART_OF(s) : s)).replace(/^(e|bx)_/, '');
-const aiCard = (s) => (AI_MAP.has(gidOf(s)) ? `assets/ai/map/${gidOf(s)}.webp?v=1` : null);
+const aiCard = (s) => (AI_MAP.has(gidOf(s)) ? `assets/ai/map/${gidOf(s)}.webp?v=2` : null);
 const FOE_RES = 2.5, ALLY_RES = 7.5;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const imgs = {};
 function img(src) { if (!imgs[src]) { imgs[src] = new Image(); imgs[src].src = src; } return imgs[src]; }
 export const ENEMY_IMG = 'assets/enemies.png?v=8';
-export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } for (const g of AI_MAP) img(`assets/ai/map/${g}.webp?v=1`); }
+export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } for (const g of AI_MAP) img(`assets/ai/map/${g}.webp?v=2`); }
 
 const SCENES = {   // backdrop strip colours (NES indexes): sky, far, near
   grass: [0x21, 0x1A, 0x0A], forest: [0x0A, 0x0B, 0x1A], hill: [0x21, 0x19, 0x09], sand: [0x31, 0x27, 0x17], swamp: [0x0C, 0x0B, 0x04],
