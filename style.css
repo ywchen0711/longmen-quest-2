@@ -336,3 +336,4 @@ div.mpic.bust { margin-bottom: calc((var(--pz) - 1) * 56px); }
 
 /* the AI-painted portraits are paintings, not pixel art */
 .mpor, .bkpic img, .cemb img, .endpor img, img.mpic.por { image-rendering: auto; }
+.dfig img, .dsmall img, img.cmpdoll { object-fit: contain; image-rendering: auto; }

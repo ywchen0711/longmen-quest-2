@@ -8,6 +8,7 @@ import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } f
 import { NES, spr } from './tiles.js?v=8';
 import { registerSheet, loadImage } from './view.js?v=8';
 import { AI_POR, AI_MAP } from './ai_art.js?v=8';
+import { dollReady, dollView, dollStrip } from './doll_ai.js?v=8';
 import { dieCut } from './paper.js?v=8';
 import { PEOPLE, CAST } from './people_art.js?v=8';
 import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=8';
@@ -54,13 +55,17 @@ export function lookOf(s) {
   }
   if (PEOPLE[s] && !Array.isArray(PEOPLE[s])) { const f = PEOPLE[s]; const a = [[f.x, f.y, f.w, f.h, 0], [f.x, f.y, f.w, f.h, 0, null, { x: f.x, y: f.y, rows: 4, mirror: true }]]; return { sheet: 'npcs', frames: { down: a, side: a, up: a } }; }
   const A = (ENEMIES[s] && ENEMY_ART[ART_OF(s)]) || ENEMY_ART[s];
-  if (A && A.f) { const [x, y, w, h] = A.f; const a = [[x, y, w, h, 0], [x + w, y, w, h, 0]]; return { sheet: 'enemies', cw: w, ch: h, scale: s.startsWith('bx_') || s.startsWith('b_') || s.startsWith('g_') ? 1.5 : 1, frames: { down: a, side: a, up: a } }; }
+  // the gallery's creatures face left, and the map's side frames face right: mirror them for walking sideways
+  if (A && A.f) { const [x, y, w, h] = A.f; const a = [[x, y, w, h, 0], [x + w, y, w, h, 0]], m = [[x, y, w, h, 1], [x + w, y, w, h, 1]]; return { sheet: 'enemies', cw: w, ch: h, scale: s.startsWith('bx_') || s.startsWith('b_') || s.startsWith('g_') ? 1.5 : 1, frames: { down: a, side: m, up: a } }; }
   if (A) { const a = [[A.x, A.y, A.w, A.h, 0], [A.x, A.y, A.w, A.h, 0]]; return { sheet: 'enemies', cw: Math.ceil(A.w / 8) * 8, ch: A.h, frames: { down: a, side: a, up: a } }; }
   return lookOf('man');
 }
 const memberLook = (m) => (m.kind === 'mon' ? lookOf(m.who) : m.who === 'yirui' ? heroLook() : lookOf(m.who));
 // 奕叡 as the paper doll dresses him: his frames in the 'doll' sheet (walk frames x down/side/up)
-const heroLook = () => { const ai = aiLook('yirui'); if (ai) return ai; const r = (y) => [[0, y, 16, 24, 0, 'doll'], [16, y, 16, 24, 0, 'doll']]; return { sheet: 'doll', frames: { down: r(0), side: r(24), up: r(48) } }; };
+let heroStrip = null;   // the painted doll's three views, once it has loaded (Game.dressUp)
+const heroLook = () => {
+  if (heroStrip) { const { cw, ch } = heroStrip, v = (i) => [[i * cw, 0, cw, ch, 0, 'ai_doll'], [i * cw, 0, cw, ch, 0, 'ai_doll']]; return { sheet: 'ai_doll', hi: true, cw, ch, hu: 1.95 * ch / 180, frames: { down: v(0), side: v(1), up: v(2) } }; }
+  const ai = aiLook('yirui'); if (ai) return ai; const r = (y) => [[0, y, 16, 24, 0, 'doll'], [16, y, 16, 24, 0, 'doll']]; return { sheet: 'doll', frames: { down: r(0), side: r(24), up: r(48) } }; };
 // the ship: a junk on its own little sheet
 let shipSheet = null;
 const shipLook = () => { if (!shipSheet) { shipSheet = spr('junk'); registerSheet('junk', shipSheet); } const w = shipSheet.width, h = shipSheet.height, a = [[0, 0, w, h, 0], [0, 0, w, h, 0]]; return { sheet: 'junk', cw: w, ch: h, scale: 1.6, frames: { down: a, side: a, up: a } }; };
@@ -98,7 +103,10 @@ export class Game {
     this.dollSig = sig; this.dollImgs = null;
     const looks = this.looksOf();
     this.dollSheet = sheetCanvas(dress(looks), NES, this.dollSheet); registerSheet('doll', this.dollSheet);
-    if (!AI_POR.has('yirui')) try { this.ui.por.yirui = portraitCanvas(dressPortrait(looks), NES).toDataURL(); } catch (e) {}
+    if (dollReady()) {
+      heroStrip = this.dollStrip = dollStrip(looks); registerSheet('ai_doll', heroStrip);
+      try { this.ui.por.yirui = dollView('bust', looks).toDataURL('image/webp', 0.9); } catch (e) {}
+    } else if (!AI_POR.has('yirui')) try { this.ui.por.yirui = portraitCanvas(dressPortrait(looks), NES).toDataURL(); } catch (e) {}
     if (this.heroA && this.party[0] && this.party[0].who === 'yirui') this.heroA.relook(heroLook());
     for (const [i, a] of (this.followA || []).entries()) if (a && this.party[i + 1] && this.party[i + 1].who === 'yirui') a.relook(heroLook());
   }
@@ -106,7 +114,8 @@ export class Game {
   dollPics(over) {
     if (!over && this.dollImgs) return this.dollImgs;
     const looks = this.looksOf(over), out = {};
-    for (const v of ['down', 'side', 'up']) { const c = document.createElement('canvas'); c.width = 16; c.height = 24; paint(c.getContext('2d'), dressView(v, 0, looks), 16, 24, NES); out[v] = dieCut(c, 1, 2, 2, '#fffaf0', '#a89a80').toDataURL(); }
+    if (dollReady()) for (const [v, pv] of [['down', 'front'], ['side', 'side'], ['up', 'back']]) out[v] = dieCut(dollView(pv, looks), 1, 6, 5, '#fffaf0', '#a89a80').toDataURL('image/webp', 0.9);
+    else for (const v of ['down', 'side', 'up']) { const c = document.createElement('canvas'); c.width = 16; c.height = 24; paint(c.getContext('2d'), dressView(v, 0, looks), 16, 24, NES); out[v] = dieCut(c, 1, 2, 2, '#fffaf0', '#a89a80').toDataURL(); }
     if (!over) this.dollImgs = out; return out;
   }
   async makeRoom(id) {

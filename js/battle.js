@@ -122,6 +122,7 @@ function memberFrames(G, m) {
     if (f && src.complete && src.naturalWidth) { for (let i = 0; i < 2; i++) out.push(cut(src, { x: f[0] + i * f[2], y: f[1], w: f[2], h: f[3] }, 16, f[3], f[3])); }
     return out;
   }
+  if (m.who === 'yirui' && G.dollStrip) { const S = G.dollStrip, a = document.createElement('canvas'); a.width = S.cw; a.height = S.ch; a.getContext('2d').drawImage(S, 2 * S.cw, 0, S.cw, S.ch, 0, 0, S.cw, S.ch); a.res = ALLY_RES; return [a, a]; }
   if (m.who === 'yirui' && G.dollSheet) { for (let i = 0; i < 2; i++) out.push(cut(G.dollSheet, { x: i * 16, y: 48, w: 16, h: 24 })); return out; }
   if (m.who === 'yishuo' && PEOPLE.yishuo_back) { const s = img(PEOPLE_IMAGE); if (s.complete && s.naturalWidth) for (const f of PEOPLE.yishuo_back) out.push(cut(s, f)); return out; }
   const back = PEOPLE[m.who + '_back'];

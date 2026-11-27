@@ -4,6 +4,7 @@ import { Input } from './input.js?v=8';
 import { UI, t, STR, getLang, setLang } from './ui.js?v=8';
 import { Audio } from './audio.js?v=8';
 import { Game, mapName, preloadAiCards } from './game.js?v=8';
+import { preloadDoll } from './doll_ai.js?v=8';
 import { CAST, PEOPLE_IMAGE } from './people_art.js?v=8';
 import { preloadBattleArt, ENEMY_IMG } from './battle.js?v=8';
 import { paperTileURL, deckleURL, woodURL } from './paper.js?v=8';
@@ -58,7 +59,7 @@ input.push((k) => {
 async function loadArt() {
   const jobs = [loadImage(PEOPLE_IMAGE).then((i) => registerSheet('npcs', i)), loadImage(ENEMY_IMG).then((i) => registerSheet('enemies', i))];
   for (const [id, c] of Object.entries(CAST)) jobs.push(loadImage(c.sheet).then((i) => registerSheet('cast_' + id, i)));
-  jobs.push(preloadAiCards());
+  jobs.push(preloadAiCards(), preloadDoll().then(() => { G.dollSig = null; G.dressUp(); }));
   await Promise.all(jobs); preloadBattleArt();
 }
 

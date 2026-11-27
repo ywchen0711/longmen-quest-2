@@ -2,3 +2,4 @@ __pycache__/
 audio/_wav/
 node_modules/
 audio/_sketch/
+art/
