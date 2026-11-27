@@ -234,7 +234,7 @@ export async function battle(G, foeIds, opts = {}) {
     const x = SW / 2 + (i - (allies.length - 1) / 2) * gap;
     a.g = { hx: x, foot: 132, sc: HS };
     a.p = { act: '', t: 0, tint: '', tintT: 0, dx: 0, dy: 0, fr: 0 };
-    a.cards = null; a.tried = false; a.poses = a.m.who === 'yirui' ? null : posesOf(a.m.who); a.pc = {};
+    a.cards = null; a.tried = false; a.poses = a.m.who === 'yirui' || (G.dollStrips && G.dollStrips[a.m.who]) ? null : posesOf(a.m.who); a.pc = {};   // (a doll's gear would vanish in a pose)
   });
   function makeFoeCard(f) {
     f.tried = true;

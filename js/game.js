@@ -64,11 +64,18 @@ export function lookOf(s) {
   if (A) { const a = [[A.x, A.y, A.w, A.h, 0], [A.x, A.y, A.w, A.h, 0]]; return { sheet: 'enemies', cw: Math.ceil(A.w / 8) * 8, ch: A.h, frames: { down: a, side: a, up: a } }; }
   return lookOf('man');
 }
-const memberLook = (m) => (m.kind === 'mon' ? lookOf(m.who) : m.who === 'yirui' ? heroLook() : lookOf(m.who));
-// 奕叡 as the paper doll dresses him: his frames in the 'doll' sheet (walk frames x down/side/up)
-let heroStrip = null;   // the painted doll's three views, once it has loaded (Game.dressUp)
+const memberLook = (m) => (m.kind === 'mon' ? lookOf(m.who) : m.who === 'yirui' ? heroLook() : dollStrips[m.who] ? dollLook(m.who) : lookOf(m.who));
+// the painted paper dolls as dressed (Game.dressUp, Game.dressMember): their three views, by who
+let heroStrip = null;
+const dollStrips = {};
+const dollLook = (who) => {
+  const S = who === 'yirui' ? heroStrip : dollStrips[who], { cw, ch } = S, k = who === 'yirui' ? 'ai_doll' : 'ai_doll_' + who;
+  const v = (i) => [[i * cw, 0, cw, ch, 0, k], [i * cw, 0, cw, ch, 0, k]];
+  return { sheet: k, hi: true, cw, ch, hu: aiTall(who) * (ch + 18) / 176, frames: { down: v(0), side: v(1), up: v(2) } };
+};
+// 奕叡 as the paper doll dresses him (the painted doll, or before it loads his pixel doll in the 'doll' sheet)
 const heroLook = () => {
-  if (heroStrip) { const { cw, ch } = heroStrip, v = (i) => [[i * cw, 0, cw, ch, 0, 'ai_doll'], [i * cw, 0, cw, ch, 0, 'ai_doll']]; return { sheet: 'ai_doll', hi: true, cw, ch, hu: aiTall('yirui') * (ch + 18) / 176, frames: { down: v(0), side: v(1), up: v(2) } }; }
+  if (heroStrip) return dollLook('yirui');
   const ai = aiLook('yirui'); if (ai) return ai; const r = (y) => [[0, y, 16, 24, 0, 'doll'], [16, y, 16, 24, 0, 'doll']]; return { sheet: 'doll', frames: { down: r(0), side: r(24), up: r(48) } }; };
 // the ship: a junk on its own little sheet
 let shipSheet = null;
@@ -94,14 +101,26 @@ export class Game {
     this.inv = { gold: 80, bag: [{ id: 'herb', n: 3 }, { id: 'bun', n: 3 }] };
     this.flags = {}; this.open = {}; this.ward = 0; this.ship = null; this.onShip = false;
     this.map = 'longmen'; this.x = 15; this.y = 7; this.dir = 'down'; this.lastSave = { map: 'longmen', x: 15, y: 4 };
-    this.stats = { battles: 0, wins: 0, steps: 0, deaths: 0, time: 0, got: {}, seen: {}, kills: {}, recruited: {} }; this.encCool = 6; this.dollSig = null;
+    this.stats = { battles: 0, wins: 0, steps: 0, deaths: 0, time: 0, got: {}, seen: {}, kills: {}, recruited: {} }; this.encCool = 6; this.dollSig = null; this.dollSigs = {};
     this.trail = [];
   }
   get hero() { return this.party.find((m) => m.who === 'yirui') || this.party[0]; }
   memberOf(who) { return this.party.find((m) => m.who === who) || this.camp.find((m) => m.who === who); }
-  // ---------------------------------------------------------------- the paper doll (奕叡 only)
-  looksOf(over) { const h = this.hero, Lk = {}; for (const s of SLOTS) { const id = over && s in over ? over[s] : h[s]; Lk[s] = id && ITEMS[id] && ITEMS[id].look ? ITEMS[id].look : null; } return Lk; }
+  // ---------------------------------------------------------------- the paper dolls (奕叡, and the members with a painted one)
+  hasDoll(m) { return !!m && m.kind !== 'mon' && (m.who === 'yirui' || dollReady(m.who)); }
+  looksOf(over, m = this.hero) { const h = m, Lk = {}; for (const s of SLOTS) { const id = over && s in over ? over[s] : h[s]; Lk[s] = id && ITEMS[id] && ITEMS[id].look ? ITEMS[id].look : null; } return Lk; }
+  dressMember(m) {
+    if (!m || m.who === 'yirui' || !dollReady(m.who) || typeof document === 'undefined') return;
+    this.dollSigs = this.dollSigs || {}; this.dollStrips = dollStrips;
+    const sig = SLOTS.map((s) => m[s] || '').join(','); if (this.dollSigs[m.who] === sig) return;
+    this.dollSigs[m.who] = sig;
+    dollStrips[m.who] = dollStrip(this.looksOf(null, m), m.who); registerSheet('ai_doll_' + m.who, dollStrips[m.who]);
+    const i = this.party.indexOf(m);
+    if (i === 0 && this.heroA) this.heroA.relook(memberLook(m));
+    else if (i > 0 && this.followA && this.followA[i - 1]) this.followA[i - 1].relook(memberLook(m));
+  }
   dressUp() {
+    for (const m of [...this.party, ...(this.camp || [])]) this.dressMember(m);
     const h = this.hero; if (!h || typeof document === 'undefined') return;
     const sig = SLOTS.map((s) => h[s] || '').join(','); if (sig === this.dollSig) return;
     this.dollSig = sig; this.dollImgs = null;
@@ -114,13 +133,14 @@ export class Game {
     if (this.heroA && this.party[0] && this.party[0].who === 'yirui') this.heroA.relook(heroLook());
     for (const [i, a] of (this.followA || []).entries()) if (a && this.party[i + 1] && this.party[i + 1].who === 'yirui') a.relook(heroLook());
   }
-  wear(m, id) { R.equip(this.inv, m, id); if (m.who === 'yirui') this.dressUp(); }
-  dollPics(over) {
-    if (!over && this.dollImgs) return this.dollImgs;
-    const looks = this.looksOf(over), out = {};
-    if (dollReady()) for (const [v, pv] of [['down', 'front'], ['side', 'side'], ['up', 'back']]) out[v] = dieCut(dollView(pv, looks), 1, 6, 5, '#fffaf0', '#a89a80').toDataURL('image/webp', 0.9);
+  wear(m, id) { R.equip(this.inv, m, id); if (m.who === 'yirui') this.dressUp(); else this.dressMember(m); }
+  dollPics(over, m = this.hero) {
+    const hero = m === this.hero;
+    if (!over && hero && this.dollImgs) return this.dollImgs;
+    const looks = this.looksOf(over, m), out = {};
+    if (dollReady(m.who)) for (const [v, pv] of [['down', 'front'], ['side', 'side'], ['up', 'back']]) out[v] = dieCut(dollView(pv, looks, m.who), 1, 6, 5, '#fffaf0', '#a89a80').toDataURL('image/webp', 0.9);
     else for (const v of ['down', 'side', 'up']) { const c = document.createElement('canvas'); c.width = 16; c.height = 24; paint(c.getContext('2d'), dressView(v, 0, looks), 16, 24, NES); out[v] = dieCut(c, 1, 2, 2, '#fffaf0', '#a89a80').toDataURL(); }
-    if (!over) this.dollImgs = out; return out;
+    if (!over && hero) this.dollImgs = out; return out;
   }
   async makeRoom(id) {
     const inv = this.inv, it = ITEMS[id];
@@ -134,7 +154,7 @@ export class Game {
   }
   serialize() { return JSON.stringify({ v: SAVE_V, party: this.party, camp: this.camp, inv: this.inv, flags: this.flags, open: this.open, map: this.map, x: this.x, y: this.y, dir: this.dir, lastSave: this.lastSave, stats: this.stats, ward: this.ward, ship: this.ship, onShip: this.onShip, when: Date.now() }); }
   load(json) {
-    const d = JSON.parse(json); this.dollSig = null;
+    const d = JSON.parse(json); this.dollSig = null; this.dollSigs = {};
     Object.assign(this, { party: d.party, camp: d.camp || [], inv: d.inv, flags: d.flags || {}, open: d.open || {}, map: d.map, x: d.x, y: d.y, dir: d.dir || 'down', lastSave: d.lastSave, stats: d.stats || this.stats, ward: d.ward || 0, ship: d.ship || null, onShip: !!d.onShip });
     for (const k of ['seen', 'kills', 'got', 'recruited']) this.stats[k] = this.stats[k] || {};
     for (const m of [...this.party, ...this.camp]) { for (const s of SLOTS) if (!(s in m)) m[s] = null; m.learned = m.learned || []; }
@@ -245,7 +265,7 @@ export class Game {
     this.heroA = this.view.actor('hero', this.onShip ? shipLook() : memberLook(this.party[0]));
     this.followA = [];
     for (let i = 1; i < this.party.length; i++) { const a = this.view.actor('f' + i, memberLook(this.party[i])); a.visible(!this.onShip); this.followA.push(a); }
-    this.dollSig = null; this.dressUp();
+    this.dollSig = null; this.dollSigs = {}; this.dressUp();
   }
 
   // ---------------------------------------------------------------- per frame
@@ -620,14 +640,14 @@ export class Game {
     const fmt = (k, v) => (k === 'crit' ? Math.round(v * 100) + '%' : v);
     const lines = rows.filter(([k]) => then[k] !== now[k] || k === 'atk' || k === 'def').map(([k, n]) => { const d = then[k] - now[k], ds = k === 'crit' ? Math.round(d * 100) + '%' : d; return `<div class="cmprow"><span>${t(n)}</span><span>${fmt(k, now[k])}→${fmt(k, then[k])}</span><b class="${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '+' + ds : d < 0 ? ds : ''}</b></div>`; }).join('');
     const fx = GEAR_FX.filter(([k]) => it[k]).map(([k, zh, en, mm, u]) => t([zh, en]) + '+' + Math.round(it[k] * mm) + u).join('　');
-    const pic = who.who === 'yirui' ? `<img class="cmpdoll" src="${this.dollPics({ [slot]: id }).down}">` : `<div class="cmpdoll cmppic">${this.picHTML(who)}</div>`;
+    const pic = this.hasDoll(who) ? `<img class="cmpdoll" src="${this.dollPics({ [slot]: id }, who).down}">` : `<div class="cmpdoll cmppic">${this.picHTML(who)}</div>`;
     const cur = who[slot] ? `<div class="cmpnow">${t(['現在', 'Now'])}：${t(ITEMS[who[slot]])}</div>` : '';
     this.cmp = this.ui.panel('cmpwin cmpgear', `${pic}<div class="cmpstats"><div class="cmpname">${t(it)}　<span>${R.nameOf(who, getLang())}</span></div>${lines}${fx ? `<div class="cmpfx">${fx}</div>` : ''}${cur}</div>`);
   }
   hideCompare() { if (this.cmp) { this.cmp.remove(); this.cmp = null; } }
   // a small picture of a member: 奕叡's doll, a person's portrait, a monster's field sprite
   picHTML(m, big) {
-    if (m.who === 'yirui') return `<img class="mpic" src="${this.dollPics().down}">`;
+    if (this.hasDoll(m)) return `<img class="mpic" src="${this.dollPics(null, m).down}">`;
     if (m.kind === 'human' && CAST[m.who]) return `<img class="mpic por" src="${CAST[m.who].portrait}">`;
     { const p = aiPortrait(m.who); if (p) return `<img class="mpic por" src="${p}">`; }   // a monster friend's painted portrait
     const a = ENEMY_ART[ART_OF(m.who)]; if (!a) return '';
@@ -782,7 +802,7 @@ export class Game {
     const s = R.stat(m), nm = R.nameOf(m, getLang());
     const fx = GEAR_FX.map(([k, zh, en, mm, u]) => [Math.min(R.gear(m, k), u === '%' ? 1 : 99), zh, en, mm, u]).filter(([v]) => v).map(([v, zh, en, mm, u]) => t([zh, en]) + '+' + Math.round(v * mm) + u).join('　');
     const title = m.kind === 'mon' ? `${nm}　${t(ENEMIES[m.who])}（${t(MROLE_NAME[SPECIES[m.who].role])}）` : `${nm}　${t([CHARS[m.who].tzh, CHARS[m.who].ten])}`;
-    const pic = m.who === 'yirui' ? this.dollHTML(m) : `<div class="dollbox">${this.picHTML(m, true)}<div class="dcol">${R.slotsOf(m).map((sl) => `<div class="dslot"><span>${t(SLOT_NAME[sl])}</span><b>${m[sl] ? t(ITEMS[m[sl]]) : '—'}</b></div>`).join('')}</div></div>`;
+    const pic = this.hasDoll(m) ? this.dollHTML(m) : `<div class="dollbox">${this.picHTML(m, true)}<div class="dcol">${R.slotsOf(m).map((sl) => `<div class="dslot"><span>${t(SLOT_NAME[sl])}</span><b>${m[sl] ? t(ITEMS[m[sl]]) : '—'}</b></div>`).join('')}</div></div>`;
     return `<div class="stname">${title}</div>
       <div class="stwrap">${pic}<div class="stright"><div class="stgrid"><span>${t('lv')}</span><b>${m.lv}${m.kind === 'mon' ? '/' + SPECIES[m.who].cap : ''}</b><span>${t('xp')}</span><b>${m.xp}</b>
       <span>${t('hp')}</span><b>${m.hp}/${s.maxHp}</b><span>${t('mp')}</span><b>${m.mp}/${s.maxMp}</b>
@@ -856,7 +876,7 @@ export class Game {
     const ui = this.ui, inv = this.inv; let at = 0;
     const slots = R.slotsOf(m);
     for (;;) {
-      const doll = ui.panel('eqdoll', m.who === 'yirui' ? this.dollHTML(m) : `<div class="dollbox">${this.picHTML(m, true)}</div>`);
+      const doll = ui.panel('eqdoll', this.hasDoll(m) ? this.dollHTML(m) : `<div class="dollbox">${this.picHTML(m, true)}</div>`);
       const i = await ui.choose(slots.map((s) => ({ label: SLOT_NAME[s], sub: m[s] ? ITEMS[m[s]] : STR.none })), { title: R.nameOf(m, getLang()), ctx: 'eqslot', cls: 'wide eqmenu', start: at });
       doll.remove();
       if (i < 0) return;
@@ -871,11 +891,12 @@ export class Game {
       if (j < own.length) this.wear(m, own[j].id);
       else if (!R.unequip(inv, m, s)) { await ui.say(null, L('行囊滿了，卸不下來。', 'Your pack is full.')); continue; }
       else if (m.who === 'yirui') this.dressUp();
+      else this.dressMember(m);
       this.audio.sfx('ok');
     }
   }
   dollHTML(m) {
-    const h = m || this.hero, P = this.dollPics();
+    const h = m || this.hero, P = this.dollPics(null, h);
     const slot = (s) => `<div class="dslot"><span>${t(SLOT_NAME[s])}</span><b>${h[s] ? t(ITEMS[h[s]]) : '—'}</b></div>`;
     return `<div class="dollbox"><div class="dcol">${['hd', 'ck', 'a', 'c'].map(slot).join('')}</div><div class="dfig"><img class="dbig" src="${P.down}"><div class="dsmall"><img src="${P.side}"><img src="${P.up}"></div></div><div class="dcol">${['w', 'pd', 'bt'].map(slot).join('')}</div></div>`;
   }

@@ -1,23 +1,27 @@
-// The painted paper doll: 奕叡 as AI paintings (tools/ai_doll.py) - a plain base per view (front, side, back and a
-// bust) and one painted layer per kind of gear, each painted in greys and whites so it takes the item's colours here.
-// The layers stack in the order the old pixel doll drew them; a slot with nothing in it adds nothing.
+// The painted paper dolls (tools/ai_doll.py): 奕叡 and the party members who wear gear, each a plain base per view
+// (front, side, back; 奕叡 also a bust) and one painted layer per kind of gear, painted in greys and whites so it takes
+// the item's colours here. The layers stack in the order the old pixel doll drew them; an empty slot adds nothing.
 import { NES } from './tiles.js?v=8';
-import { DOLL } from './doll_ai_data.js?v=8';
+import { DOLLS } from './doll_ai_data.js?v=8';
 
 const VIEWS = ['front', 'side', 'back', 'bust'];
 const ORDER = ['a', 'bt', 'c', 'pd', 'ck', 'w', 'hd'];
 const PAPER = '#f3e8cf';
-const imgs = {};
-let ready = false;
+const imgs = {}, ready = {};
+const dir = (who) => (who === 'yirui' ? 'assets/ai/doll/' : `assets/ai/doll/${who}/`);
 const load = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 
 export function preloadDoll() {
-  const jobs = [];
-  for (const v of VIEWS) if (DOLL.views[v]) jobs.push(load(`assets/ai/doll/${v}_base.webp?v=3`).then((i) => { imgs[v + '_base'] = i; }));
-  for (const [n, vs] of Object.entries(DOLL.layers)) for (const v of vs) jobs.push(load(`assets/ai/doll/${n}_${v}.webp?v=3`).then((i) => { imgs[n + '_' + v] = i; }));
-  return Promise.all(jobs).then(() => { ready = VIEWS.every((v) => !DOLL.views[v] || imgs[v + '_base']); });
+  const all = [];
+  for (const [who, D] of Object.entries(DOLLS)) {
+    const jobs = [], im = (imgs[who] = {});
+    for (const v of VIEWS) if (D.views[v]) jobs.push(load(`${dir(who)}${v}_base.webp?v=3`).then((i) => { im[v + '_base'] = i; }));
+    for (const [n, vs] of Object.entries(D.layers)) for (const v of vs) jobs.push(load(`${dir(who)}${n}_${v}.webp?v=3`).then((i) => { im[n + '_' + v] = i; }));
+    all.push(Promise.all(jobs).then(() => { ready[who] = VIEWS.every((v) => !D.views[v] || im[v + '_base']); }));
+  }
+  return Promise.all(all);
 }
-export const dollReady = () => ready;
+export const dollReady = (who = 'yirui') => !!ready[who];
 
 const dark = (c) => (c >= 0x10 ? c - 0x10 : 0x0F);
 const light = (c) => (c < 0x30 ? c + 0x10 : 0x30);
@@ -38,9 +42,9 @@ function layerOf(slot, lk) {
 // the layer in the item's colours: greys and whites follow a dark-middle-light ramp; skin and anything with colour
 // of its own (a red tassel, a hand) stays as painted
 const tintCache = new Map();
-function tinted(name, view, pal) {
-  const key = `${name}|${view}|${pal}`; if (tintCache.has(key)) return tintCache.get(key);
-  const src = imgs[name + '_' + view]; if (!src) return null;
+function tinted(who, name, view, pal) {
+  const key = `${who}|${name}|${view}|${pal}`; if (tintCache.has(key)) return tintCache.get(key);
+  const src = imgs[who] && imgs[who][name + '_' + view]; if (!src) return null;
   const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d');
   g.drawImage(src, 0, 0);
   const id = g.getImageData(0, 0, c.width, c.height), d = id.data, P = pal.map(rgb);
@@ -58,26 +62,26 @@ function tinted(name, view, pal) {
   if (tintCache.size > 120) tintCache.clear();
   tintCache.set(key, c); return c;
 }
-// one view with what he wears; looks = { w, hd, a, ck, c, pd, bt } (item looks or null)
-export function dollView(view, looks) {
-  const [W, H] = DOLL.views[view], c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+// one view with what they wear; looks = { w, hd, a, ck, c, pd, bt } (item looks or null)
+export function dollView(view, looks, who = 'yirui') {
+  const D = DOLLS[who], [W, H] = D.views[view], c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   if (view === 'bust') { g.fillStyle = PAPER; g.fillRect(0, 0, W, H); }
-  g.drawImage(imgs[view + '_base'], 0, 0);
+  g.drawImage(imgs[who][view + '_base'], 0, 0);
   const worn = { ...looks };
-  // no headgear, or a crown over his topknot: he keeps his blue headband
-  if (!worn.hd || worn.hd.f === 'crown') g.drawImage(tinted('hd_band', view, [0x11, 0x21, 0x31]) || c, 0, 0);
+  // 奕叡 with no headgear, or a crown over his topknot, keeps his blue headband
+  if (who === 'yirui' && (!worn.hd || worn.hd.f === 'crown')) g.drawImage(tinted(who, 'hd_band', view, [0x11, 0x21, 0x31]) || c, 0, 0);
   for (const slot of ORDER) {
     const lk = worn[slot]; if (!lk || (view === 'bust' && slot !== 'hd')) continue;   // the bust shows his headgear
-    const [name, pal] = layerOf(slot, lk); if (!name || !DOLL.layers[name] || !DOLL.layers[name].includes(view)) continue;
-    const t = tinted(name, view, pal); if (t) g.drawImage(t, 0, 0);
+    const [name, pal] = layerOf(slot, lk); if (!name || !D.layers[name] || !D.layers[name].includes(view)) continue;
+    const t = tinted(who, name, view, pal); if (t) g.drawImage(t, 0, 0);
   }
   return c;
 }
 // the three map views in one strip of equal cells (feet on the bottom edge), for the map card and the battle card
-export function dollStrip(looks) {
-  const cw = Math.max(...['front', 'side', 'back'].map((v) => DOLL.views[v][0])), ch = Math.max(...['front', 'side', 'back'].map((v) => DOLL.views[v][1]));
+export function dollStrip(looks, who = 'yirui') {
+  const D = DOLLS[who], cw = Math.max(...['front', 'side', 'back'].map((v) => D.views[v][0])), ch = Math.max(...['front', 'side', 'back'].map((v) => D.views[v][1]));
   const s = document.createElement('canvas'); s.width = cw * 3; s.height = ch; const g = s.getContext('2d');
-  ['front', 'side', 'back'].forEach((v, i) => { const c = dollView(v, looks); g.drawImage(c, i * cw + Math.floor((cw - c.width) / 2), ch - c.height); });
+  ['front', 'side', 'back'].forEach((v, i) => { const c = dollView(v, looks, who); g.drawImage(c, i * cw + Math.floor((cw - c.width) / 2), ch - c.height); });
   s.cw = cw; s.ch = ch;
   return s;
 }

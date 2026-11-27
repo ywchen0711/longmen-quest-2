@@ -1,16 +1,19 @@
-"""Paints 奕叡's paper doll in the AI style: a plain base (front, side, back and a bust), then one layer per kind of
-gear, inpainted onto the base in neutral colours so the game can tint each item.
+"""Paints the paper dolls in the AI style, for 奕叡 and the party members who wear gear: a plain base (front, side,
+back; 奕叡 also a bust), then one layer per kind of gear, inpainted onto the base in neutral colours so the game can
+tint each item.
 
-    C:/sdenv/Scripts/python tools/ai_doll.py base [seed]      art/doll/base_<view>.png
-    C:/sdenv/Scripts/python tools/ai_doll.py layers           art/doll/<layer>_<view>.png
+    C:/sdenv/Scripts/python tools/ai_doll.py base <who> [seeds]   art/doll[/<who>]/base_<view>_<seed>.png
+    C:/sdenv/Scripts/python tools/ai_doll.py layers <who>         art/doll[/<who>]/<layer>_<view>.png
+    C:/sdenv/Scripts/python tools/ai_doll.py pack [who ...]       assets/ai/doll[/<who>]/, js/doll_ai_data.js
 """
-import os, sys
+import json, os, sys
 sys.path.insert(0, 'C:/LongmenTactics/tools')
 import ai_art
+import numpy as np
+from PIL import Image, ImageFilter
+import ai_cut as C
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, 'art', 'doll')
-WHO = '1boy, teenage boy, black hair, short spiky hair, blue hanfu robe, sash, black trousers, black cloth shoes, empty hands, arms at sides, ancient china'
 VIEWS = {
     'front': 'chibi, full body, front view, standing, green background, simple background',
     'side': 'chibi, full body, from side, profile, standing, green background, simple background',
@@ -18,42 +21,56 @@ VIEWS = {
     'bust': 'portrait, upper body, close-up, looking at viewer, green background, simple background',
 }
 NEG = 'weapon, sword, holding, hat, headband, hair ornament, armor, cape, shadow, '
-CHIBI_WHO = '1boy, teenage boy, black hair, short spiky hair, blue hanfu robe, sash, black trousers, black cloth shoes, empty hands'
+# Who has a doll. who: the plain look (their signature things kept when the game has no gear picture for them,
+# e.g. 奕碩's ball, 文對仗's brush); weapons: the weapon layers they can show; pick: the chosen seed per view.
+DOLLS = {
+    'yirui': {'girl': False, 'bust': True, 'pick': {'front': 21, 'side': 21, 'back': 21, 'bust': 41},
+              'who': '1boy, teenage boy, black hair, short spiky hair, blue hanfu robe, sash, black trousers, black cloth shoes, empty hands',
+              'bust_who': '1boy, teenage boy, black hair, short spiky hair, blue hanfu robe, sash, black trousers, black cloth shoes, empty hands, arms at sides, ancient china',
+              'weapons': ['w_dao', 'w_sword', 'w_spear', 'w_bigdao', 'w_staff', 'w_fan'], 'neg': NEG},
+    'yishuo': {'girl': False, 'pick': {'front': 21, 'side': 21, 'back': 11},
+               'who': '1boy, teenage boy, black hair, red headband, plain vermilion jacket, black pants, sneakers, holding a leather ball',
+               'weapons': [], 'neg': 'weapon, sword, hat, armor, cape, shadow, '},
+    'wudadan': {'girl': False, 'pick': {'front': 11, 'side': 11, 'back': 11},
+                'who': '1boy, giant bearded escort, very tall, bushy black beard, plain grey escort uniform, black pants, cloth shoes, empty hands',
+                'weapons': ['w_staff'], 'neg': NEG},
+    'wenduizhang': {'girl': False, 'pick': {'front': 21, 'side': 21, 'back': 21},
+                    'who': '1boy, young scholar, scholar hat, plain light blue robe, black cloth shoes, holding giant calligraphy brush',
+                    'weapons': [], 'neg': 'weapon, sword, armor, cape, shadow, '},
+    'suxiaowan': {'girl': True, 'pick': {'front': 21, 'side': 21, 'back': 21},
+                  'who': '1girl, pale ghostly young woman, long black hair, plain faded white and lavender dress, empty hands',
+                  'weapons': ['w_fan'], 'neg': NEG},
+    'chutiankuo': {'girl': False, 'pick': {'front': 21, 'side': 21, 'back': 11},
+                   'who': '1boy, young swordsman, spiky brown hair, plain white and red robe, black boots, empty hands',
+                   'weapons': ['w_sword'], 'neg': NEG},
+}
 
 
-def base(seed, views=None):
-    """The map views use the very prompt shape of the gallery's chibis (C:\LongmenTactics\tools\ai_chibi.py), so he
-    has their proportions (big head, short body) and stands the same size beside his companions."""
+def out_dir(who):
+    return os.path.join(ROOT, 'art', 'doll') if who == 'yirui' else os.path.join(ROOT, 'art', 'doll', who)
+
+
+def views_of(who):
+    return ['front', 'side', 'back'] + (['bust'] if DOLLS[who].get('bust') else [])
+
+
+def base(who, seed):
+    """The map views use the very prompt shape of the gallery's chibis (C:\\LongmenTactics\\tools\\ai_chibi.py), so
+    the dolls have their proportions (big head, short body) and stand the same size beside everyone else."""
     import ai_chibi
     from ai_tags import FACES
+    D, out = DOLLS[who], out_dir(who)
     P = ai_art.pipe(False)
-    os.makedirs(OUT, exist_ok=True)
-    for v, lead in VIEWS.items():
-        if views and v not in views:
-            continue
-        if v != 'bust':
-            face = '' if v == 'back' else ', ' + FACES['yirui'].lstrip('!')
-            pr = f'chibi, full body, {ai_chibi.VIEWS[v]}, green background, simple background, {CHIBI_WHO}{face}, solo, masterpiece'
-            neg = NEG + ('looking at viewer, face, eyes, ' if v == 'back' else '')
-            ai_art.paint(P, pr, 832, 1216, seed, False, neg).save(os.path.join(OUT, f'base_{v}_{seed}.png'))
-            print(v, flush=True)
-            continue
-        neg = NEG + ('looking at viewer, face, ' if v == 'back' else '')
-        w, h = (896, 1152) if v == 'bust' else (832, 1216)
-        ai_art.paint(P, f'{lead}, {WHO}, solo, masterpiece', w, h, seed, False, neg).save(os.path.join(OUT, f'base_{v}_{seed}.png'))
-        print(v, flush=True)
-
-
+    os.makedirs(out, exist_ok=True)
+    for v in ('front', 'side', 'back'):
+        face = '' if v == 'back' else ', ' + FACES.get(who, '').lstrip('!')
+        pr = f'chibi, full body, {ai_chibi.VIEWS[v]}, green background, simple background, {D["who"]}{face}, solo, masterpiece'
+        neg = D['neg'] + ('looking at viewer, face, eyes, ' if v == 'back' else '')
+        ai_art.paint(P, pr, 832, 1216, seed, False, neg).save(os.path.join(out, f'base_{v}_{seed}.png'))
+        print(who, v, seed, flush=True)
 
 
 # ---------------------------------------------------------------- layers
-import numpy as np
-from PIL import Image, ImageFilter
-import ai_cut as C
-
-PICK = {'front': 21, 'side': 21, 'back': 21, 'bust': 41}
-
-
 def figure(img):
     """The figure's mask (full size) and its bounding box."""
     a = np.asarray(img.convert('RGB').resize((img.width // 4, img.height // 4), Image.BOX)).astype(np.int16)
@@ -64,10 +81,10 @@ def figure(img):
 
 def region(box, frac, size, feather=12):
     """A repaint mask: rectangles given as fractions of the figure's box (they may reach outside it)."""
+    from PIL import ImageDraw
     x0, y0, x1, y1 = box
     w, h = x1 - x0, y1 - y0
     m = Image.new('L', size, 0)
-    from PIL import ImageDraw
     d = ImageDraw.Draw(m)
     for fx0, fy0, fx1, fy1 in frac:
         d.rounded_rectangle((x0 + fx0 * w, y0 + fy0 * h, x0 + fx1 * w, y0 + fy1 * h), radius=24, fill=255)
@@ -87,22 +104,25 @@ def inpainter():
     return _INP
 
 
-def inpaint(view, prompt, frac, seed=11, neg=''):
+def base_img(who, view):
+    return Image.open(os.path.join(out_dir(who), f'base_{view}_{DOLLS[who]["pick"][view]}.png')).convert('RGB')
+
+
+def inpaint(who, view, prompt, frac, seed=11, neg=''):
     import torch
-    src = Image.open(os.path.join(OUT, f'base_{view}_{PICK[view]}.png')).convert('RGB')
+    src = base_img(who, view)
     fig, box = figure(src)
     mask = region(box, frac, src.size)
-    lead = VIEWS[view]
     g = torch.Generator('cuda').manual_seed(seed)
-    out = inpainter()(prompt=f'{lead}, 1boy, {prompt}, solo, masterpiece', negative_prompt=neg + 'shadow, ' + ai_art.NEG,
-                      image=src, mask_image=mask, width=src.width, height=src.height, strength=0.99,
-                      num_inference_steps=30, guidance_scale=6, generator=g).images[0]
+    out = inpainter()(prompt=f'{VIEWS[view]}, {"1girl" if DOLLS[who]["girl"] else "1boy"}, {prompt}, solo, masterpiece',
+                      negative_prompt=neg + 'shadow, ' + ai_art.NEG, image=src, mask_image=mask, width=src.width, height=src.height,
+                      strength=0.99, num_inference_steps=30, guidance_scale=6, generator=g).images[0]
     return src, out, mask
 
 
 # Each layer: the prompt (gear in neutral greys and whites, so the game can tint it) and, per view, the rectangles to
-# repaint as fractions of the figure's box. Head pieces stop above the eyes; weapons sit in his right hand (the
-# viewer's left) or across his back.
+# repaint as fractions of the figure's box. Head pieces stop above the eyes; weapons sit in the right hand (the
+# viewer's left) or across the back.
 # (fractions for the chibi base: the head takes the top ~45%, the body to ~88%, the feet below)
 HEAD_F = {'front': [(0.1, 0.04, 0.9, 0.24)], 'side': [(0.05, 0.04, 1.0, 0.24)], 'back': [(0.0, 0.04, 1.0, 0.3)], 'bust': [(0.12, -0.04, 0.88, 0.26)]}
 HAT_F = {'front': [(-0.22, -0.28, 1.22, 0.2)], 'side': [(-0.2, -0.28, 1.2, 0.2)], 'back': [(-0.22, -0.28, 1.22, 0.32)], 'bust': [(-0.05, -0.2, 1.05, 0.2)]}
@@ -136,30 +156,26 @@ LAYERS = {
     'w_staff': ('holding long white staff, quarterstaff with metal caps', TALL_W),
     'w_fan': ('holding white folding fan', {'front': [(-0.32, 0.45, 0.32, 0.82)], 'side': [(-0.3, 0.45, 0.45, 0.82)], 'back': []}),
 }
-BACKWEAR = {'w_dao': 'white steel dao sheathed on his back, scabbard across back', 'w_sword': 'white steel sword sheathed on his back, scabbard across back',
-            'w_spear': 'long spear slung across his back', 'w_bigdao': 'large guandao slung across his back', 'w_staff': 'long white staff slung across his back'}
+BACKWEAR = {'w_dao': 'white steel dao sheathed on back, scabbard across back', 'w_sword': 'white steel sword sheathed on back, scabbard across back',
+            'w_spear': 'long spear slung across back', 'w_bigdao': 'large guandao slung across back', 'w_staff': 'long white staff slung across back'}
 
 
-def layers():
-    os.makedirs(OUT, exist_ok=True)
-    for name, (prompt, views) in LAYERS.items():
+def layers_of(who):
+    return {n: v for n, v in LAYERS.items() if not n.startswith('w_') or n in DOLLS[who]['weapons']}
+
+
+def layers(who):
+    out = out_dir(who)
+    for name, (prompt, views) in layers_of(who).items():
         for view, frac in views.items():
-            dst = os.path.join(OUT, f'{name}_{view}.png')
-            if not frac or os.path.exists(dst):
+            dst = os.path.join(out, f'{name}_{view}.png')
+            if not frac or view not in views_of(who) or os.path.exists(dst):
                 continue
             pr = BACKWEAR.get(name, prompt) if view == 'back' else prompt
             neg = ('looking at viewer, face, ' if view == 'back' else '') + ('hat, ' if not name.startswith('hd') else '')
-            _, out, _ = inpaint(view, pr, frac, neg=neg)
-            out.save(dst)
-            print(name, view, flush=True)
-
-
-if __name__ == '__main__':
-    if sys.argv[1] == 'base':
-        for s in sys.argv[2:] or ['11']:
-            base(int(s), ['front', 'side', 'back'])
-    elif sys.argv[1] == 'layers':
-        layers()
+            _, img, _ = inpaint(who, view, pr, frac, neg=neg)
+            img.save(dst)
+            print(who, name, view, flush=True)
 
 
 # ---------------------------------------------------------------- pack for the game
@@ -178,29 +194,27 @@ def _fg(img):
     return np.asarray(Image.fromarray((m * 255).astype(np.uint8)).resize(img.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(1.5))) / 255.0
 
 
-def _layer(view, name):
+def _layer(who, view, name):
     """The gear alone: what the inpainting changed, inside its mask, that is not background."""
-    src = Image.open(os.path.join(OUT, f'base_{view}_{PICK[view]}.png')).convert('RGB')
-    out = Image.open(os.path.join(OUT, f'{name}_{view}.png')).convert('RGB')
+    src = base_img(who, view)
+    out = Image.open(os.path.join(out_dir(who), f'{name}_{view}.png')).convert('RGB')
     _, box = figure(src)
-    prompt, views = LAYERS[name]
-    mask = np.asarray(region(box, views[view], src.size)) / 255.0
+    mask = np.asarray(region(box, LAYERS[name][1][view], src.size)) / 255.0
     diff = np.abs(np.asarray(out).astype(np.int16) - np.asarray(src).astype(np.int16)).sum(axis=2) > 45
     d = np.asarray(Image.fromarray((diff * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.GaussianBlur(2))) / 255.0
     alpha = mask * d * _fg(out)
-    rgba = np.dstack([np.asarray(out), (alpha * 255).astype(np.uint8)])
-    return Image.fromarray(rgba, 'RGBA')
+    return Image.fromarray(np.dstack([np.asarray(out), (alpha * 255).astype(np.uint8)]), 'RGBA')
 
 
-def pack():
-    import json
-    dst = os.path.join(ROOT, 'assets', 'ai', 'doll')
+def pack_one(who):
+    dst = os.path.join(ROOT, 'assets', 'ai', 'doll') if who == 'yirui' else os.path.join(ROOT, 'assets', 'ai', 'doll', who)
     os.makedirs(dst, exist_ok=True)
     info = {'views': {}, 'layers': {}}
-    for view in ('front', 'side', 'back', 'bust'):
-        src = Image.open(os.path.join(OUT, f'base_{view}_{PICK[view]}.png')).convert('RGB')
-        base_rgba = src.convert('RGBA'); base_rgba.putalpha(Image.fromarray((_fg(src) * 255).astype(np.uint8)))
-        layers = {n: _layer(view, n) for n, (_, vs) in LAYERS.items() if vs.get(view) and os.path.exists(os.path.join(OUT, f'{n}_{view}.png'))}
+    for view in views_of(who):
+        src = base_img(who, view)
+        base_rgba = src.convert('RGBA')
+        base_rgba.putalpha(Image.fromarray((_fg(src) * 255).astype(np.uint8)))
+        layers = {n: _layer(who, view, n) for n, (_, vs) in layers_of(who).items() if vs.get(view) and os.path.exists(os.path.join(out_dir(who), f'{n}_{view}.png'))}
         if view == 'bust':
             w = src.width * 6 // 7
             crop, size = ((src.width - w) // 2, 0, (src.width - w) // 2 + w, src.width * 7 // 6), (240, 280)
@@ -213,26 +227,46 @@ def pack():
                     box = [min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3])]
             s = 176 / (fb[3] - fb[1])
             crop, size = tuple(box), (round((box[2] - box[0]) * s), round((box[3] - box[1]) * s))
-        def fit(im):
+
+        def fit(im, flip=view == 'side'):   # side views are painted looking left; the map's side views face right
             im = im.crop(crop)
             col = im.convert('RGB').resize(size, Image.LANCZOS)
             if view != 'bust':
                 col = col.filter(ImageFilter.UnsharpMask(1, 60, 2))
-            out = col.convert('RGBA'); out.putalpha(im.getchannel('A').resize(size, Image.LANCZOS))
-            return out
-        if view == 'side':   # painted looking left (eye and nose on the left); the map's side views face right
-            fit0 = fit
-            fit = lambda im: fit0(im).transpose(Image.FLIP_LEFT_RIGHT)
+            o = col.convert('RGBA')
+            o.putalpha(im.getchannel('A').resize(size, Image.LANCZOS))
+            return o.transpose(Image.FLIP_LEFT_RIGHT) if flip else o
         fit(base_rgba).save(os.path.join(dst, f'{view}_base.webp'), quality=92, method=6)
         for n, im in layers.items():
             fit(im).save(os.path.join(dst, f'{n}_{view}.webp'), quality=92, method=6)
             info['layers'].setdefault(n, []).append(view)
         info['views'][view] = list(size)
-        print(view, size, len(layers), flush=True)
+        print(who, view, size, len(layers), flush=True)
+    with open(os.path.join(ROOT, 'art', f'doll_{who}.json'), 'w', encoding='utf-8') as f:
+        json.dump(info, f)
+
+
+def pack(whos):
+    for w in whos:
+        pack_one(w)
+    dolls = {}
+    for w in DOLLS:
+        p = os.path.join(ROOT, 'art', f'doll_{w}.json')
+        if os.path.exists(p):
+            dolls[w] = json.load(open(p, encoding='utf-8'))
     with open(os.path.join(ROOT, 'js', 'doll_ai_data.js'), 'w', encoding='utf-8') as f:
-        f.write('// Made by tools/ai_doll.py pack: the painted paper doll in assets/ai/doll/. Do not edit by hand.\n')
-        f.write(f'export const DOLL = {json.dumps(info, separators=(",", ":"))};\n')
+        f.write('// Made by tools/ai_doll.py pack: the painted paper dolls in assets/ai/doll/ (奕叡) and assets/ai/doll/<who>/.\n')
+        f.write('// Do not edit by hand.\n')
+        f.write(f'export const DOLLS = {json.dumps(dolls, separators=(",", ":"))};\n')
+        f.write('export const DOLL = DOLLS.yirui;\n')
 
 
-if __name__ == '__main__' and sys.argv[1] == 'pack':
-    pack()
+if __name__ == '__main__':
+    cmd = sys.argv[1]
+    if cmd == 'base':
+        for s in sys.argv[3:] or ['11']:
+            base(sys.argv[2], int(s))
+    elif cmd == 'layers':
+        layers(sys.argv[2])
+    elif cmd == 'pack':
+        pack(sys.argv[2:] or list(DOLLS))
