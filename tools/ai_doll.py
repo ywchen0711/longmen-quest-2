@@ -18,12 +18,26 @@ VIEWS = {
     'bust': 'portrait, upper body, close-up, looking at viewer, green background, simple background',
 }
 NEG = 'weapon, sword, holding, hat, headband, hair ornament, armor, cape, shadow, '
+CHIBI_WHO = '1boy, teenage boy, black hair, short spiky hair, blue hanfu robe, sash, black trousers, black cloth shoes, empty hands'
 
 
-def base(seed):
+def base(seed, views=None):
+    """The map views use the very prompt shape of the gallery's chibis (C:\LongmenTactics\tools\ai_chibi.py), so he
+    has their proportions (big head, short body) and stands the same size beside his companions."""
+    import ai_chibi
+    from ai_tags import FACES
     P = ai_art.pipe(False)
     os.makedirs(OUT, exist_ok=True)
     for v, lead in VIEWS.items():
+        if views and v not in views:
+            continue
+        if v != 'bust':
+            face = '' if v == 'back' else ', ' + FACES['yirui'].lstrip('!')
+            pr = f'chibi, full body, {ai_chibi.VIEWS[v]}, green background, simple background, {CHIBI_WHO}{face}, solo, masterpiece'
+            neg = NEG + ('looking at viewer, face, eyes, ' if v == 'back' else '')
+            ai_art.paint(P, pr, 832, 1216, seed, False, neg).save(os.path.join(OUT, f'base_{v}_{seed}.png'))
+            print(v, flush=True)
+            continue
         neg = NEG + ('looking at viewer, face, ' if v == 'back' else '')
         w, h = (896, 1152) if v == 'bust' else (832, 1216)
         ai_art.paint(P, f'{lead}, {WHO}, solo, masterpiece', w, h, seed, False, neg).save(os.path.join(OUT, f'base_{v}_{seed}.png'))
@@ -37,7 +51,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 import ai_cut as C
 
-PICK = {'front': 41, 'side': 31, 'back': 41, 'bust': 41}
+PICK = {'front': 21, 'side': 21, 'back': 21, 'bust': 41}
 
 
 def figure(img):
@@ -89,37 +103,38 @@ def inpaint(view, prompt, frac, seed=11, neg=''):
 # Each layer: the prompt (gear in neutral greys and whites, so the game can tint it) and, per view, the rectangles to
 # repaint as fractions of the figure's box. Head pieces stop above the eyes; weapons sit in his right hand (the
 # viewer's left) or across his back.
-HEAD_F = {'front': [(0.08, -0.06, 0.92, 0.2)], 'side': [(0.05, -0.06, 1.0, 0.2)], 'back': [(0.0, -0.06, 1.0, 0.3)], 'bust': [(0.12, -0.04, 0.88, 0.26)]}
-HAT_F = {'front': [(-0.22, -0.28, 1.22, 0.16)], 'side': [(-0.2, -0.28, 1.2, 0.16)], 'back': [(-0.22, -0.28, 1.22, 0.3)], 'bust': [(-0.05, -0.2, 1.05, 0.2)]}
-BODY_F = {'front': [(0.04, 0.36, 0.96, 0.86)], 'side': [(0.1, 0.36, 0.95, 0.86)], 'back': [(0.04, 0.33, 0.96, 0.86)], 'bust': [(0.0, 0.55, 1.0, 1.0)]}
-HAND_W = {'front': [(-0.5, 0.22, 0.36, 1.0)], 'side': [(-0.5, 0.22, 0.6, 1.0)], 'back': [(-0.05, 0.12, 1.05, 0.92)]}
+# (fractions for the chibi base: the head takes the top ~45%, the body to ~88%, the feet below)
+HEAD_F = {'front': [(0.1, 0.04, 0.9, 0.24)], 'side': [(0.05, 0.04, 1.0, 0.24)], 'back': [(0.0, 0.04, 1.0, 0.3)], 'bust': [(0.12, -0.04, 0.88, 0.26)]}
+HAT_F = {'front': [(-0.22, -0.28, 1.22, 0.2)], 'side': [(-0.2, -0.28, 1.2, 0.2)], 'back': [(-0.22, -0.28, 1.22, 0.32)], 'bust': [(-0.05, -0.2, 1.05, 0.2)]}
+BODY_F = {'front': [(0.04, 0.46, 0.96, 0.88)], 'side': [(0.1, 0.46, 0.95, 0.88)], 'back': [(0.04, 0.44, 0.96, 0.88)], 'bust': [(0.0, 0.55, 1.0, 1.0)]}
+HAND_W = {'front': [(-0.5, 0.36, 0.36, 1.0)], 'side': [(-0.5, 0.36, 0.6, 1.0)], 'back': [(-0.05, 0.3, 1.05, 0.95)]}
 TALL_W = {'front': [(-0.5, -0.35, 0.36, 1.0)], 'side': [(-0.5, -0.35, 0.6, 1.0)], 'back': [(-0.05, -0.3, 1.05, 0.95)]}
 LAYERS = {
     'hd_band': ('blue headband tied around forehead', HEAD_F),
     'hd_brow': ('white metal forehead guard, brow plate on forehead', HEAD_F),
     'hd_hat': ('white conical straw hat, wide brim', HAT_F),
-    'hd_veil': ('white conical hat with long dark veil hanging from the brim', {**HAT_F, 'front': [(-0.22, -0.28, 1.22, 0.5)], 'side': [(-0.2, -0.28, 1.2, 0.5)], 'bust': [(-0.05, -0.2, 1.05, 0.7)]}),
-    'hd_helm': ('round white iron helmet', {k: [(-0.05, -0.15, 1.05, 0.18)] if k != 'back' else [(-0.05, -0.15, 1.05, 0.32)] for k in HEAD_F}),
+    'hd_veil': ('white conical hat with long dark veil hanging from the brim', {**HAT_F, 'front': [(-0.22, -0.28, 1.22, 0.55)], 'side': [(-0.2, -0.28, 1.2, 0.55)], 'bust': [(-0.05, -0.2, 1.05, 0.7)]}),
+    'hd_helm': ('round white iron helmet', {k: [(-0.05, -0.15, 1.05, 0.22)] if k != 'back' else [(-0.05, -0.15, 1.05, 0.34)] for k in HEAD_F}),
     'hd_crown': ('small white crown on top of head, topknot', {k: [(0.25, -0.2, 0.75, 0.1)] for k in HEAD_F}),
     'a_trim': ('white leather armor vest with trim over robe', BODY_F),
     'a_chain': ('white chainmail armor over robe', BODY_F),
     'a_scale': ('white scale armor, lamellar armor over robe', BODY_F),
-    'ck': ('long white cape, cloak over shoulders', {'front': [(-0.14, 0.3, 0.2, 0.97), (0.8, 0.3, 1.14, 0.97), (0.1, 0.3, 0.9, 0.42)],
-            'side': [(0.4, 0.3, 1.25, 0.97)], 'back': [(-0.12, 0.3, 1.12, 0.97)], 'bust': [(-0.05, 0.5, 1.05, 1.0)]}),
-    'c_bracer': ('white leather bracers on forearms', {'front': [(-0.06, 0.5, 0.26, 0.74), (0.74, 0.5, 1.06, 0.74)], 'side': [(0.2, 0.5, 0.8, 0.74)],
-                 'back': [(-0.06, 0.5, 0.26, 0.74), (0.74, 0.5, 1.06, 0.74)]}),
-    'c_mirror': ('round white metal chest plate, protective mirror on chest', {'front': [(0.28, 0.37, 0.72, 0.62)], 'side': [(0.2, 0.37, 0.7, 0.62)]}),
+    'ck': ('long white cape, cloak over shoulders', {'front': [(-0.14, 0.42, 0.2, 0.97), (0.8, 0.42, 1.14, 0.97), (0.1, 0.42, 0.9, 0.54)],
+            'side': [(0.4, 0.42, 1.25, 0.97)], 'back': [(-0.12, 0.42, 1.12, 0.97)], 'bust': [(-0.05, 0.5, 1.05, 1.0)]}),
+    'c_bracer': ('white leather bracers on forearms', {'front': [(-0.06, 0.56, 0.26, 0.78), (0.74, 0.56, 1.06, 0.78)], 'side': [(0.2, 0.56, 0.8, 0.78)],
+                 'back': [(-0.06, 0.56, 0.26, 0.78), (0.74, 0.56, 1.06, 0.78)]}),
+    'c_mirror': ('round white metal chest plate, protective mirror on chest', {'front': [(0.28, 0.47, 0.72, 0.68)], 'side': [(0.2, 0.47, 0.7, 0.68)]}),
     'bt_boots': ('white leather boots', {k: [(0.02, 0.86, 0.98, 1.03)] for k in ('front', 'side', 'back')}),
-    'bt_greaves': ('white metal greaves, shin guards over boots', {k: [(0.02, 0.74, 0.98, 1.03)] for k in ('front', 'side', 'back')}),
-    'pd_jade': ('white jade pendant necklace', {'front': [(0.36, 0.36, 0.64, 0.56)], 'side': [(0.2, 0.36, 0.6, 0.56)], 'bust': [(0.35, 0.6, 0.65, 0.95)]}),
-    'pd_charm': ('small white charm amulet necklace', {'front': [(0.36, 0.36, 0.64, 0.56)], 'side': [(0.2, 0.36, 0.6, 0.56)], 'bust': [(0.35, 0.6, 0.65, 0.95)]}),
-    'pd_beads': ('white prayer beads necklace', {'front': [(0.2, 0.33, 0.8, 0.56)], 'side': [(0.15, 0.33, 0.7, 0.56)], 'bust': [(0.2, 0.55, 0.8, 0.95)]}),
+    'bt_greaves': ('white metal greaves, shin guards over boots', {k: [(0.02, 0.8, 0.98, 1.03)] for k in ('front', 'side', 'back')}),
+    'pd_jade': ('white jade pendant necklace', {'front': [(0.36, 0.45, 0.64, 0.62)], 'side': [(0.2, 0.45, 0.6, 0.62)], 'bust': [(0.35, 0.6, 0.65, 0.95)]}),
+    'pd_charm': ('small white charm amulet necklace', {'front': [(0.36, 0.45, 0.64, 0.62)], 'side': [(0.2, 0.45, 0.6, 0.62)], 'bust': [(0.35, 0.6, 0.65, 0.95)]}),
+    'pd_beads': ('white prayer beads necklace', {'front': [(0.2, 0.43, 0.8, 0.62)], 'side': [(0.15, 0.43, 0.7, 0.62)], 'bust': [(0.2, 0.55, 0.8, 0.95)]}),
     'w_dao': ('holding white steel dao, chinese saber with ring pommel', {**HAND_W, 'back': [(-0.05, 0.12, 1.05, 0.92)]}),
     'w_sword': ('holding white steel sword, jian', HAND_W),
     'w_spear': ('holding long spear, white steel spearhead, red tassel', TALL_W),
     'w_bigdao': ('holding large white guandao, long-handled big saber', TALL_W),
     'w_staff': ('holding long white staff, quarterstaff with metal caps', TALL_W),
-    'w_fan': ('holding white folding fan', {'front': [(-0.32, 0.34, 0.32, 0.78)], 'side': [(-0.3, 0.34, 0.45, 0.78)], 'back': []}),
+    'w_fan': ('holding white folding fan', {'front': [(-0.32, 0.45, 0.32, 0.82)], 'side': [(-0.3, 0.45, 0.45, 0.82)], 'back': []}),
 }
 BACKWEAR = {'w_dao': 'white steel dao sheathed on his back, scabbard across back', 'w_sword': 'white steel sword sheathed on his back, scabbard across back',
             'w_spear': 'long spear slung across his back', 'w_bigdao': 'large guandao slung across his back', 'w_staff': 'long white staff slung across his back'}
@@ -142,7 +157,7 @@ def layers():
 if __name__ == '__main__':
     if sys.argv[1] == 'base':
         for s in sys.argv[2:] or ['11']:
-            base(int(s))
+            base(int(s), ['front', 'side', 'back'])
     elif sys.argv[1] == 'layers':
         layers()
 
