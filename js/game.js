@@ -629,6 +629,7 @@ export class Game {
   picHTML(m, big) {
     if (m.who === 'yirui') return `<img class="mpic" src="${this.dollPics().down}">`;
     if (m.kind === 'human' && CAST[m.who]) return `<img class="mpic por" src="${CAST[m.who].portrait}">`;
+    { const p = aiPortrait(m.who); if (p) return `<img class="mpic por" src="${p}">`; }   // a monster friend's painted portrait
     const a = ENEMY_ART[ART_OF(m.who)]; if (!a) return '';
     if (big) return `<div class="mpic bust" style="width:${a.w}px;height:${a.h}px;background-image:url(${ENEMY_IMG});background-position:-${a.x}px -${a.y}px"></div>`;
     const f = a.f || [a.x, a.y, a.w, a.h];
@@ -766,7 +767,7 @@ export class Game {
     const show = (j) => {
       if (card) card.remove();
       const id = ids[j], E = ENEMIES[id], info = ENEMY_INFO[ART_OF(id)] || ENEMY_INFO[id];
-      const pic = E.por ? `<div class="bkpic"><img src="${CAST[E.por] ? CAST[E.por].portrait : ''}"></div>` : (() => { const a = ENEMY_ART[ART_OF(id)]; return a ? `<div class="bkpic"><div class="bkspr" style="width:${a.w}px;height:${a.h}px;background-image:url(${ENEMY_IMG});background-position:-${a.x}px -${a.y}px"></div></div>` : ''; })();
+      const ap = aiPortrait(E.por || id), pic = ap ? `<div class="bkpic"><img src="${ap}"></div>` : E.por ? `<div class="bkpic"><img src="${CAST[E.por] ? CAST[E.por].portrait : ''}"></div>` : (() => { const a = ENEMY_ART[ART_OF(id)]; return a ? `<div class="bkpic"><div class="bkspr" style="width:${a.w}px;height:${a.h}px;background-image:url(${ENEMY_IMG});background-position:-${a.x}px -${a.y}px"></div></div>` : ''; })();
       const meta = info ? `${t(info.habitat)}` : t(['首領', 'Boss']);
       const S = SPECIES[id];
       const join = S ? (rec[id] ? `<div class="bkjoin">★ ${t(['已有夥伴', 'A friend joined'])} ×${rec[id]}　${t(MROLE_NAME[S.role])}</div>` : `<div class="bkjoin dim">${t(['可能會加入', 'May join'])}　${t(MROLE_NAME[S.role])}</div>`) : '';
