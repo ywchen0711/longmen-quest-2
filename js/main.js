@@ -1,5 +1,5 @@
 // Boot: build the view, the title screen, the opening, and run the fixed-timestep loop.
-import { View, pickQuality, loadImage, registerSheet } from './view.js?v=8';
+import { View, pickQuality, loadImage, registerSheet } from './view.js?v=9';
 import { Input } from './input.js?v=8';
 import { UI, t, STR, getLang, setLang } from './ui.js?v=8';
 import { Audio } from './audio.js?v=8';
@@ -84,7 +84,7 @@ function loop(now) {
     if (G.mode === 'field' && fps < 48 && performance.now() > 6000) {
       if (++slow > 120) {
         slow = 0; fps = 60;
-        if (!view.prCap) { view.prCap = 1; view.resize(); }
+        if (!view.prCap) { view.prCap = Math.min(1, 720 / (view.canvas.clientHeight || 720)); view.resize(); }   // back to the old 720 lines
         else if (view.dropMSAA()) { /* stepped down */ }
         else if (view.post) { view.post = false; view.composer = null; }
         else if (!view.cheap) view.setCheap();

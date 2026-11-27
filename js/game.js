@@ -6,7 +6,7 @@ import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map
 import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=8';
 import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=8';
 import { NES, spr } from './tiles.js?v=8';
-import { registerSheet, loadImage } from './view.js?v=8';
+import { registerSheet, loadImage } from './view.js?v=9';
 import { AI_POR, AI_MAP, AI_SIZE } from './ai_art.js?v=8';
 import { dollReady, dollView, dollStrip } from './doll_ai.js?v=8';
 import { dieCut } from './paper.js?v=8';

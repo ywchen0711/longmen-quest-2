@@ -150,7 +150,11 @@ const CARD_FS = `${PAPER_GLSL}
     if (vPart > 0.5 && vPart < 1.5) col = uPaper * (vLoc.y < 0.3 ? 0.78 : 0.94);
     else {
       vec2 r = vLoc * vRep, f = fract(r);
+    #ifdef SMOOTH
+      vec4 t = texG(uAtlas, vRect.xy + vec2(f.x, 1.0 - f.y) * vRect.zw, dFdx(r) * vRect.zw, dFdy(r) * vRect.zw);
+    #else
       vec4 t = texPix(uAtlas, vRect.xy + vec2(f.x, 1.0 - f.y) * vRect.zw, dFdx(r) * vRect.zw, dFdy(r) * vRect.zw);
+    #endif
       vec3 tc = t.rgb / max(t.a, 0.02);   // (transparent texels are black: undo the darkening the filter mixes in)
       if (has(vFlags, 8.0)) {
         vec2 dd = min(vLoc, 1.0 - vLoc) * vSz; float e = min(dd.x, (1.0 - vLoc.y) * vSz.y);
@@ -162,12 +166,17 @@ const CARD_FS = `${PAPER_GLSL}
           col = mix(col, uCut, (1.0 - smoothstep(0.014 - aw * 0.5, 0.014 + aw * 0.5, e)) * min(1.0, 0.014 / aw + 0.35));
         } else { alpha = cover(t.a); col = tc; }
       } else { alpha = cover(t.a); col = tc; }
+    #ifdef SMOOTH
+      alpha = clamp((t.a - 0.5) / max(fwidth(t.a), 1e-3) + 0.5, 0.0, 1.0);   // a soft edge a pixel wide, blended
+    #endif
     }
     if (alpha <= 0.0) discard;
   #ifdef EDGE
     col = uEdge;
   #endif
+  #ifndef SMOOTH
     col *= 0.9 + 0.1 * texture2D(uGrain, vW.xy * 0.37 + vW.z * 0.21).r;
+  #endif
     if (has(vFlags, 2.0)) gl_FragColor = vec4(col * (1.2 + 0.18 * sin(uTime * 13.0 + vW.x * 5.0)), alpha);
     else gl_FragColor = vec4(shade(col, normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0), vW, vDepth), alpha);
     #include <colorspace_fragment>
@@ -256,11 +265,11 @@ export class View {
     const touch = (navigator.maxTouchPoints || 0) > 0;
     // (phones get 1.25 too since the zoom-out made the cards smaller: their picture is small, so it stays cheap, and
     // the frame-rate watchdog drops it back to 1 first)
-    let pr = Math.min(window.devicePixelRatio || 1, this.quality === 'high' || (touch && this.quality === 'medium') ? 1.25 : 1, this.prCap || 9);
+    let pr = Math.min(window.devicePixelRatio || 1, this.quality === 'high' ? (touch ? 1.25 : 2) : touch && this.quality === 'medium' ? 1.25 : 1, this.prCap || 9);
     if (touch) pr = Math.max(1, Math.min(pr, Math.sqrt(2000000 / (w * h))));
-    // never render the 3D map taller than 720 pixels (680 on phones and tablets: a little more than before the
+    // never render the 3D map taller than 1440 pixels on a computer (900 at medium quality; 680 on phones and tablets: a little more than before the
     // zoom-out, so the smaller cards stay sharp enough to read)
-    pr = Math.min(pr, (touch ? 680 : 720) / h);
+    pr = Math.min(pr, (touch ? 680 : this.quality === 'high' ? 1440 : 900) / h);
     if (this.quality === 'low') pr = Math.min(pr, 1);
     this.renderer.setPixelRatio(pr); this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.aspect = w / h;
@@ -309,9 +318,11 @@ export class View {
   }
 
   // ---------------------------------------------------------------- materials
-  cardMaterial(map, edge = false) {
-    const defines = {}; if (edge) defines.EDGE = 1; if (this.msaa) defines.A2C = 1;
-    return new THREE.ShaderMaterial({ uniforms: { ...this.U, uAtlas: { value: map || this.atlas } }, vertexShader: CARD_VS, fragmentShader: CARD_FS, side: THREE.DoubleSide, defines, alphaToCoverage: !!this.msaa });
+  // smooth: a painted figure (filtered, soft-edged, blended, no paper grain) rather than pixel art
+  cardMaterial(map, edge = false, smooth = false) {
+    const defines = {}; if (edge) defines.EDGE = 1; if (this.msaa && !smooth) defines.A2C = 1; if (smooth) defines.SMOOTH = 1;
+    return new THREE.ShaderMaterial({ uniforms: { ...this.U, uAtlas: { value: map || this.atlas } }, vertexShader: CARD_VS, fragmentShader: CARD_FS, side: THREE.DoubleSide, defines,
+      alphaToCoverage: !!this.msaa && !smooth, transparent: smooth });
   }
 
   // ---------------------------------------------------------------- building a map
@@ -812,7 +823,7 @@ class Actor {
     this.A = { pos: ia([0, 0, 0, this.b], 4), size: ia([this.W, this.H, 0, 0], 4), uv: ia([0, 0, 1, 1], 4), uv2: ia([0, 0, 1, 1], 4), misc: ia([0, 0, 1, 0], 4), roll: ia([0, 0], 2), rise: ia([0], 1) };
     for (const [k2, a] of [['iPos', this.A.pos], ['iSize', this.A.size], ['iUV', this.A.uv], ['iUV2', this.A.uv2], ['iMisc', this.A.misc], ['iRoll', this.A.roll], ['iRise', this.A.rise]]) g.setAttribute(k2, a);
     g.instanceCount = 1;
-    this.mat = view.cardMaterial(null);
+    this.mat = view.cardMaterial(null, false, !!look.hi);
     this.mesh = new THREE.Mesh(g, this.mat); this.mesh.frustumCulled = false; view.group.add(this.mesh);
     this.blob = new THREE.Mesh(view.blobGeo, view.blobMat); view.group.add(this.blob);
     this.rise = 0; this.vel = 0; this.delay = 0.15 + Math.random() * 0.12; this.walk = 0; this.px = null; this.pz = null; this.moved = false; this.x = 0; this.z = 0; this.y = 0;
@@ -822,7 +833,7 @@ class Actor {
     const k = dir + i; if (this.cache[k]) return this.cache[k];
     const L = this.look, list = L.frames[dir] || L.frames.down, f = list[i % list.length];
     const img = SHEETS[f[5] || L.sheet]; const W = this.cw, H = this.ch; const c = canvasOf(W, H); const x = c.getContext('2d');
-    if (img && L.hi) { if (f[4]) { x.translate(W, 0); x.scale(-1, 1); } x.drawImage(img, f[0], f[1], f[2], f[3], 0, 0, W, H); return (this.cache[k] = texOf(dieCut(c, 1, HI_PAD, HI_PAD - 2), { nearest: false })); }
+    if (img && L.hi) { if (f[4]) { x.translate(W, 0); x.scale(-1, 1); } x.drawImage(img, f[0], f[1], f[2], f[3], 0, 0, W, H); const t = texOf(dieCut(c, 1, HI_PAD, HI_PAD - 2), { nearest: false }); t.anisotropy = 4; return (this.cache[k] = t); }
     if (img) { x.imageSmoothingEnabled = false; const flip = f[4]; if (flip) { x.translate(W, 0); x.scale(-1, 1); } x.drawImage(img, f[0], f[1], f[2], f[3], Math.floor((W - f[2]) / 2), H - f[3], f[2], f[3]);
       const lg = f[6]; if (lg) { const n = lg.rows, dx = Math.floor((W - f[2]) / 2); x.clearRect(dx, H - n, f[2], n); if (lg.mirror) { x.save(); x.translate(2 * dx + f[2], 0); x.scale(-1, 1); } x.drawImage(img, lg.x, lg.y + f[3] - n, f[2], n, dx, H - n, f[2], n); if (lg.mirror) x.restore(); } }
     return (this.cache[k] = texOf(dieCut(c, 4, 6, 5), { nearest: false }));
