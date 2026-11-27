@@ -15,12 +15,19 @@ import { t, STR, getLang } from './ui.js?v=8';
 import { hex, NES } from './tiles.js?v=8';
 import { dieCut, grainCanvas } from './paper.js?v=8';
 import { inkLandscape } from './ink.js?v=8';
+import { AI_MAP } from './ai_art.js?v=8';
+
+// The AI-painted cards (assets/ai/map, front | side | back, 160 x 180 each), by Character Gallery id. A painted
+// card carries res: its pixels per stage pixel, so it stands as tall as the pixel art it replaces, drawn smoothed.
+const gidOf = (s) => (CAST[s] ? s : (ENEMIES[s] ? ART_OF(s) : s)).replace(/^(e|bx)_/, '');
+const aiCard = (s) => (AI_MAP.has(gidOf(s)) ? `assets/ai/map/${gidOf(s)}.webp?v=1` : null);
+const FOE_RES = 2.5, ALLY_RES = 7.5;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const imgs = {};
 function img(src) { if (!imgs[src]) { imgs[src] = new Image(); imgs[src].src = src; } return imgs[src]; }
 export const ENEMY_IMG = 'assets/enemies.png?v=8';
-export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } }
+export function preloadBattleArt() { img(ENEMY_IMG); img(PEOPLE_IMAGE); for (const c of Object.values(CAST)) { img(c.portrait); img(c.sheet); } for (const g of AI_MAP) img(`assets/ai/map/${g}.webp?v=1`); }
 
 const SCENES = {   // backdrop strip colours (NES indexes): sky, far, near
   grass: [0x21, 0x1A, 0x0A], forest: [0x0A, 0x0B, 0x1A], hill: [0x21, 0x19, 0x09], sand: [0x31, 0x27, 0x17], swamp: [0x0C, 0x0B, 0x04],
@@ -104,6 +111,12 @@ function scenery(scene) {
 function memberFrames(G, m) {
   const out = [];
   const cut = (src, f, w = 16, h = 24, bh = 24) => { const a = document.createElement('canvas'); a.width = w; a.height = bh; a.getContext('2d').drawImage(src, f.x, f.y, f.w, f.h, Math.floor((w - f.w) / 2), bh - f.h, f.w, f.h); return a; };
+  const ai = aiCard(m.who);
+  if (ai) {
+    const s = img(ai); if (!s.complete || !s.naturalWidth) return out;
+    const a = document.createElement('canvas'); a.width = 160; a.height = 180; a.getContext('2d').drawImage(s, 320, 0, 160, 180, 0, 0, 160, 180); a.res = ALLY_RES;
+    return [a, a];
+  }
   if (m.kind === 'mon') {
     const a = ENEMY_ART[ART_OF(m.who)] || ENEMY_ART.e_greywolf, f = a.f, src = img(ENEMY_IMG);
     if (f && src.complete && src.naturalWidth) { for (let i = 0; i < 2; i++) out.push(cut(src, { x: f[0] + i * f[2], y: f[1], w: f[2], h: f[3] }, 16, f[3], f[3])); }
@@ -173,20 +186,23 @@ export async function battle(G, foeIds, opts = {}) {
   // each foe: its picture (gallery bust or portrait) scaled by whole device pixels so the row fits
   for (const f of foes) {
     const E = f.E;
-    if (E.por && CAST[E.por]) { f.src = img(CAST[E.por].portrait); f.art = { x: 0, y: 0, w: 48, h: 56 }; }
+    const ai = aiCard(E.por && CAST[E.por] ? E.por : f.id);
+    f.res = 1; f.pad = 3;
+    if (ai) { f.src = img(ai); f.art = { x: 0, y: 0, w: 160, h: 180 }; f.res = FOE_RES; f.pad = Math.round(3 * FOE_RES); }
+    else if (E.por && CAST[E.por]) { f.src = img(CAST[E.por].portrait); f.art = { x: 0, y: 0, w: 48, h: 56 }; }
     else { f.src = img(ENEMY_IMG); f.art = ENEMY_ART[ART_OF(f.id)] || ENEMY_ART.e_greywolf; }
   }
   let kk = 5;   // device pixels per art pixel (k/3 stage pixels)
-  const want = (k) => foes.reduce((s, f) => s + (f.art.w * k * (f.E.big && f.E.big > 1 ? f.E.big : 1) / 3) + 7, -7);
-  const tallest = (k) => Math.max(...foes.map((f) => f.art.h * k * (f.E.big && f.E.big > 1 ? f.E.big : 1) / 3));
+  const want = (k) => foes.reduce((s, f) => s + (f.art.w / f.res * k * (f.E.big && f.E.big > 1 ? f.E.big : 1) / 3) + 7, -7);
+  const tallest = (k) => Math.max(...foes.map((f) => f.art.h / f.res * k * (f.E.big && f.E.big > 1 ? f.E.big : 1) / 3));
   while (kk > 2 && (want(kk) > 228 || tallest(kk) > 88 || (foes.length > 1 && kk > 4))) kk--;
   {
     let x = (SW - want(kk)) / 2;
     for (const f of foes) {
-      const sc = (kk / 3) * (f.E.big && f.E.big > 1 ? f.E.big : 1), w = f.art.w * sc, h = f.art.h * sc;
+      const sc = (kk / 3) * (f.E.big && f.E.big > 1 ? f.E.big : 1) / f.res, w = f.art.w * sc, h = f.art.h * sc;
       f.g = { sc, w, h, cx: x + w / 2, foot: FOOT, top: FOOT - h, cy: FOOT - h / 2 }; x += w + 7;
       f.fx = { alpha: 1, shake: 0, white: 0, blink: 0, kx: 0, ky: 0, lunge: 0, lx: 0, ly: 0, diss: 0, dissRate: 0, flee: 0, dodge: 0, ddir: 1, tb: 0, tbv: 0, roll: 0, rv: 0, rise: -1, risen: 0 };
-      f.card = null; f.sil = null; f.shad = null; f.tried = false; f.thr = new Float32Array(Math.ceil((f.art.w + 6) / 2));
+      f.card = null; f.sil = null; f.shad = null; f.tried = false; f.thr = new Float32Array(Math.ceil((f.art.w + 2 * f.pad) / 2));
     }
   }
   const HS = 5 / 3, HBP = 2;
@@ -201,7 +217,7 @@ export async function battle(G, foeIds, opts = {}) {
     f.tried = true;
     try {
       const a = document.createElement('canvas'); a.width = f.art.w; a.height = f.art.h; a.getContext('2d').drawImage(f.src, f.art.x, f.art.y, f.art.w, f.art.h, 0, 0, f.art.w, f.art.h);
-      f.card = dieCut(a, 1, 3, 2.2, '#fffaf0', '#a89a80');
+      f.card = dieCut(a, 1, f.pad, 2.2 * f.res, '#fffaf0', '#a89a80');
       const mk = (col) => { const c = document.createElement('canvas'); c.width = f.card.width; c.height = f.card.height; const g = c.getContext('2d'); g.drawImage(f.card, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height); return c; };
       f.sil = mk('#fcfcfc'); f.shad = mk('rgba(30,18,6,0.42)');
     } catch (e) { f.card = null; }
@@ -210,12 +226,13 @@ export async function battle(G, foeIds, opts = {}) {
     const fr = memberFrames(G, a.m); if (!fr.length) return;
     a.tried = true;
     try {
-      a.cards = fr.map((c) => dieCut(c, 1, HBP, 2, '#fffaf0', '#a89a80'));
+      const r = fr[0].res || 1; a.res = r;
+      a.cards = fr.map((c) => dieCut(c, 1, HBP * r, 2 * r, '#fffaf0', '#a89a80'));
       const c0 = a.cards[0], W = c0.width, H = c0.height;
-      a.cw = W; a.ch = H;
+      a.cw = W / r; a.ch = H / r;
       const mk = (col) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(c0, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, W, H); return c; };
       a.tints = { red: mk(COLS[0x16]), white: mk('#fcfcfc'), green: mk(COLS[0x2A]), gold: mk(COLS[0x28]), blue: mk(COLS[0x21]), purple: mk(COLS[0x24]), grey: mk('rgba(40,30,20,0.55)'), shad: mk('rgba(30,18,6,0.42)') };
-      a.g.w = W * HS; a.g.h = H * HS; a.g.top = a.g.foot - a.g.h + HBP * HS; a.g.cy = a.g.foot - a.g.h / 2;
+      a.g.w = W / r * HS; a.g.h = H / r * HS; a.g.top = a.g.foot - a.g.h + HBP * HS; a.g.cy = a.g.foot - a.g.h / 2;
     } catch (e) { a.cards = null; }
   }
   // geometry of any fighter's card (for effects): centre, top, foot, half width
@@ -279,7 +296,7 @@ export async function battle(G, foeIds, opts = {}) {
     let dy = 0, lx = 0, lr = 0;
     if (fx.lunge > 0) { const u = fx.lunge; if (u > 0.30) { dy = -2; lx = -fx.lx * 0.15; lr = 0.05 * Math.sign(fx.lx); } else if (u > 0.08) { dy = fx.ly; lx = fx.lx; lr = -0.08 * Math.sign(fx.lx || 1); } else { dy = 1; lx = fx.lx * 0.2; } }
     const dg = fx.dodge > 0 ? fx.ddir * 16 * (fx.dodge > 0.34 ? (0.42 - fx.dodge) / 0.08 : fx.dodge > 0.14 ? 1 : fx.dodge / 0.14) : 0;
-    const cw = f.card.width * sc, ch = f.card.height * sc, bp = 3 * sc;
+    const cw = f.card.width * sc, ch = f.card.height * sc, bp = f.pad * sc;
     const x0 = R3(g.cx - cw / 2 + fx.kx + lx + Math.round(dg) + (fx.shake > 0 ? Math.random() * 4 - 2 : 0)), y0 = R3(g.foot - ch + bp + dy + fx.ky);
     const white = fx.white > 0 || (fx.blink > 0 && blinkOn(fx.blink, 15));
     const S = white ? f.sil : f.card;
@@ -289,6 +306,7 @@ export async function battle(G, foeIds, opts = {}) {
     if (fx.diss <= 0 && f.shad) { cx.save(); cx.translate(baseX, baseY); cx.transform(1, 0, -0.5 * rs, 0.32 * rs, 0, 0); cx.drawImage(f.shad, x0 - baseX, y0 - baseY, cw, ch); cx.restore(); }
     const tb = Math.max(-0.25, Math.min(0.6, fx.tb)), roll = lr + fx.roll;
     cx.save(); cx.translate(baseX, baseY); if (roll) cx.rotate(roll); cx.scale(1, rs * (1 - 0.45 * tb)); cx.translate(-baseX, -baseY);
+    if (f.res > 1) { cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; }
     if (fx.diss <= 0) cx.drawImage(S, 0, 0, S.width, S.height, x0, y0, cw, ch);
     else {
       const CW = S.width, CH = S.height, N = f.thr.length;
@@ -299,7 +317,7 @@ export async function battle(G, foeIds, opts = {}) {
         if (p > 0) { cx.fillStyle = COLS[(i + Math.floor(T * 20)) % 3 ? 0x27 : 0x38]; cx.fillRect(X, Y, w2 * sc, sc); if (Math.random() < 0.04) part(X + sc, Y, (Math.random() - 0.5) * 20, -20 - Math.random() * 30, 0.35, SPARK[i & 3], 1, 0, 1); }
       }
     }
-    cx.restore(); cx.globalAlpha = 1;
+    cx.restore(); cx.globalAlpha = 1; cx.imageSmoothingEnabled = false;
   }
   // a party member's poses (seconds on p.t): atk / crit / miss (dash to the foe and strike), cast (hands up), hurt /
   // hurt2 (knocked back), dodge, block, hop, ko (falls flat), kick (a ball leaves his foot)
@@ -379,11 +397,13 @@ export async function battle(G, foeIds, opts = {}) {
     }
     cx.globalAlpha = 1;
     cx.save(); cx.translate(R3(Pp.x), R3(Pp.y)); if (Pp.rot) cx.rotate(Pp.rot); cx.scale(sc, sc * ys);
+    if (a.res > 1) { cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; }
     const flash = stop > 0 && (a.p.act === 'hurt' || a.p.act === 'hurt2');
     cx.drawImage(flash ? a.tints.white : a.cards[Pp.fr % a.cards.length], -HW / 2, top, HW, HH);
     if (a.p.act === 'ko' || a.p.act === 'down') { cx.globalAlpha = a.p.act === 'down' ? 1 : Math.min(1, a.p.t * 3); cx.drawImage(a.tints.grey, -HW / 2, top, HW, HH); }
     else if (a.p.tintT > 0 && !flash && blinkOn(a.p.tintT, 12)) { cx.globalAlpha = a.p.tint === 'red' ? 0.72 : 0.42; cx.drawImage(a.tints[a.p.tint] || a.tints.white, -HW / 2, top, HW, HH); }
     cx.globalAlpha = 1;
+    cx.imageSmoothingEnabled = false;
     if (Pp.bl && a.m.who === 'yirui') blade(a, Pp); else a.lastBa = Pp.ba;
     cx.restore();
   }
