@@ -94,14 +94,14 @@ body { font-family: 'Cubic11', 'PingFang TC', 'Microsoft JhengHei', monospace; f
 .dslot b { font-weight: normal; font-size: 0.85em; white-space: nowrap; }
 .dfig { display: flex; flex-direction: column; align-items: center; gap: 0.2em; }
 .dfig img { image-rendering: pixelated; display: block; filter: drop-shadow(1px 2px 1px rgba(40, 25, 10, 0.3)); }
-.dbig { width: calc(20px * var(--pz) * 2.2); height: calc(28px * var(--pz) * 2.2); transform: rotate(-2deg); }
+.dbig { width: calc(20px * var(--pz) * 4); height: calc(28px * var(--pz) * 4); transform: rotate(-2deg); }
 .dsmall { display: flex; gap: 0.3em; }
-.dsmall img { width: calc(20px * var(--pz) * 0.75); height: calc(28px * var(--pz) * 0.75); }
+.dsmall img { width: calc(20px * var(--pz) * 1.6); height: calc(28px * var(--pz) * 1.6); }
 .stwrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 1.2em; }
 .stfx { margin-top: 0.3em; color: var(--sub); font-size: 0.85em; }
 /* a piece's change: the doll wearing it and every number that moves */
 .cmpgear { display: flex; align-items: center; gap: 0.5em; max-width: 52%; }
-.cmpdoll { width: calc(20px * var(--pz) * 1.7); height: calc(28px * var(--pz) * 1.7); image-rendering: pixelated; flex: none; }
+.cmpdoll { width: calc(20px * var(--pz) * 2.6); height: calc(28px * var(--pz) * 2.6); image-rendering: pixelated; flex: none; }
 .cmpname { color: var(--red); } .cmpname span { color: var(--sub); font-size: 0.8em; }
 .cmprow { display: grid; grid-template-columns: auto auto 3em; column-gap: 0.6em; font-size: 0.9em; }
 .cmprow b { font-weight: normal; text-align: right; }
@@ -248,7 +248,7 @@ body.touch.port #btns { grid-column: 2; grid-row: 2; }
   .statuswin .stwrap { flex-wrap: nowrap; align-items: flex-start; gap: 0.8em; }
   .statuswin .dcol { min-width: 0; }
   .statuswin .dsmall { display: none; }
-  .statuswin .dbig { width: calc(20px * var(--pz) * 1.6); height: calc(28px * var(--pz) * 1.6); }
+  .statuswin .dbig { width: calc(20px * var(--pz) * 2.8); height: calc(28px * var(--pz) * 2.8); }
 }
 
 /* ---------------------------------------------------------------- the sequel: party battles, the party in menus */
