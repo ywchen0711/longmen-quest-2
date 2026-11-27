@@ -288,14 +288,26 @@ export async function battle(G, foeIds, opts = {}) {
 
   // ---------------------------------------------------------------- the frame
   let alive = true, raf = 0, last = performance.now(), T = 0, stop = 0, scr = 0, scrC = 0x30;
+  // the camera's punch-in on a heavy blow: a quick zoom towards the impact that eases back
+  const cam = { t: 0, d: 1, x: SW / 2, y: SH / 2, k: 0 };
+  const punch = (x, y, k = 0.07, d = 0.32) => { if (fast) return; cam.t = d; cam.d = d; cam.x = x; cam.y = y; cam.k = k; };
   const hl = { u: null, t: 0 };
   const mark = (u, d = 0.8) => { if (!fast) { hl.u = u; hl.t = d; } };
   function drawFoe(f) {
     const fx = f.fx, g = f.g, sc = g.sc;
     if (!f.tried && f.src.complete && f.src.naturalWidth) makeFoeCard(f);
     if (!f.card || fx.alpha <= 0) return;
-    let dy = 0, lx = 0, lr = 0;
-    if (fx.lunge > 0) { const u = fx.lunge; if (u > 0.30) { dy = -2; lx = -fx.lx * 0.15; lr = 0.05 * Math.sign(fx.lx); } else if (u > 0.08) { dy = fx.ly; lx = fx.lx; lr = -0.08 * Math.sign(fx.lx || 1); } else { dy = 1; lx = fx.lx * 0.2; } }
+    let dy = 0, lx = 0, lr = 0, gx = 1, gy = 1, ghost = 0;
+    // the lunge (0.36 s): it rears back and squats, springs at its target (growing as it comes at the camera, stretched,
+    // trailing afterimages), then settles home
+    if (fx.lunge > 0) {
+      const u = fx.lunge, sg = Math.sign(fx.lx || 1);
+      if (u > 0.26) { const q = (0.36 - u) / 0.10; dy = -3 * q; lx = -fx.lx * 0.12 * q; lr = 0.07 * sg * q; gy = 1 - 0.09 * q; gx = 1 + 0.06 * q; }
+      else if (u > 0.10) { const q = (0.26 - u) / 0.16, e = easeOut(Math.min(1, q * 1.7)); dy = fx.ly * e; lx = fx.lx * e; lr = -0.1 * sg * e; gx = gy = 1 + 0.12 * e; gy *= 1.05; ghost = e; }
+      else { const q = u / 0.10; dy = fx.ly * q; lx = fx.lx * q; gx = gy = 1 + 0.12 * q; }
+    }
+    // breathing: every card rises and falls a little, each at its own pace
+    const br = Math.sin(T * 2.3 + f.i * 1.7); gy *= 1 + 0.016 * br; gx *= 1 - 0.008 * br;
     const dg = fx.dodge > 0 ? fx.ddir * 16 * (fx.dodge > 0.34 ? (0.42 - fx.dodge) / 0.08 : fx.dodge > 0.14 ? 1 : fx.dodge / 0.14) : 0;
     const cw = f.card.width * sc, ch = f.card.height * sc, bp = f.pad * sc;
     const x0 = R3(g.cx - cw / 2 + fx.kx + lx + Math.round(dg) + (fx.shake > 0 ? Math.random() * 4 - 2 : 0)), y0 = R3(g.foot - ch + bp + dy + fx.ky);
@@ -306,8 +318,10 @@ export async function battle(G, foeIds, opts = {}) {
     cx.globalAlpha = fx.alpha;
     if (fx.diss <= 0 && f.shad) { cx.save(); cx.translate(baseX, baseY); cx.transform(1, 0, -0.5 * rs, 0.32 * rs, 0, 0); cx.drawImage(f.shad, x0 - baseX, y0 - baseY, cw, ch); cx.restore(); }
     const tb = Math.max(-0.25, Math.min(0.6, fx.tb)), roll = lr + fx.roll;
-    cx.save(); cx.translate(baseX, baseY); if (roll) cx.rotate(roll); cx.scale(1, rs * (1 - 0.45 * tb)); cx.translate(-baseX, -baseY);
+    cx.save(); cx.translate(baseX, baseY); if (roll) cx.rotate(roll); cx.scale(gx, rs * (1 - 0.45 * tb) * gy); cx.translate(-baseX, -baseY);
     if (f.res > 1) { cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; }
+    if (ghost > 0.15 && fx.diss <= 0) for (const k of [0.4, 0.7]) { cx.globalAlpha = fx.alpha * 0.22 * (1 - k * 0.5); cx.drawImage(S, 0, 0, S.width, S.height, x0 - lx * (1 - k), y0 - dy * (1 - k), cw, ch); }
+    cx.globalAlpha = fx.alpha;
     if (fx.diss <= 0) cx.drawImage(S, 0, 0, S.width, S.height, x0, y0, cw, ch);
     else {
       const CW = S.width, CH = S.height, N = f.thr.length;
@@ -397,7 +411,8 @@ export async function battle(G, foeIds, opts = {}) {
       cx.save(); cx.translate(a.g.hx + (Pp.x - a.g.hx) * f, a.g.foot + (Pp.y - a.g.foot) * f); cx.scale(sc, sc * ys); cx.drawImage(a.tints.blue, -HW / 2, top, HW, HH); cx.restore();
     }
     cx.globalAlpha = 1;
-    cx.save(); cx.translate(R3(Pp.x), R3(Pp.y)); if (Pp.rot) cx.rotate(Pp.rot); cx.scale(sc, sc * ys);
+    const br = a.p.act ? 0 : Math.sin(T * 2.3 + a.i * 2.1 + 1);
+    cx.save(); cx.translate(R3(Pp.x), R3(Pp.y)); if (Pp.rot) cx.rotate(Pp.rot); cx.scale(sc * (1 - 0.008 * br), sc * ys * (1 + 0.016 * br));
     if (a.res > 1) { cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; }
     const flash = stop > 0 && (a.p.act === 'hurt' || a.p.act === 'hurt2');
     cx.drawImage(flash ? a.tints.white : a.cards[Pp.fr % a.cards.length], -HW / 2, top, HW, HH);
@@ -405,7 +420,7 @@ export async function battle(G, foeIds, opts = {}) {
     else if (a.p.tintT > 0 && !flash && blinkOn(a.p.tintT, 12)) { cx.globalAlpha = a.p.tint === 'red' ? 0.72 : 0.42; cx.drawImage(a.tints[a.p.tint] || a.tints.white, -HW / 2, top, HW, HH); }
     cx.globalAlpha = 1;
     cx.imageSmoothingEnabled = false;
-    if (Pp.bl && a.m.who === 'yirui') blade(a, Pp); else a.lastBa = Pp.ba;
+    if (Pp.bl && a.m.who === 'yirui' && !(a.res > 1)) blade(a, Pp); else a.lastBa = Pp.ba;
     cx.restore();
   }
   function statusMarks() {
@@ -583,6 +598,8 @@ export async function battle(G, foeIds, opts = {}) {
   function draw(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
     const adt = stop > 0 ? 0 : dt; stop = Math.max(0, stop - dt);
+    cx.save();
+    if (cam.t > 0) { const q = cam.t / cam.d, z = 1 + cam.k * q * q; cx.translate(cam.x, cam.y); cx.scale(z, z); cx.translate(-cam.x, -cam.y); cam.t = Math.max(0, cam.t - dt); }
     cx.drawImage(bg, 0, 0, SW, SH);
     for (const f of foes) drawFoe(f);
     for (const a of allies) drawAlly(a);
@@ -612,6 +629,7 @@ export async function battle(G, foeIds, opts = {}) {
       cx.drawImage(s, R3(X + 5), R3(Y + 1), w, hh);
       cx.restore();
     }
+    cx.restore();
     if (scr > 0) { cx.fillStyle = COLS[scrC]; cx.fillRect(0, 0, SW, SH); scr -= dt; }
     for (const f of foes) {
       const fx = f.fx;
@@ -660,7 +678,7 @@ export async function battle(G, foeIds, opts = {}) {
     add('star', big ? 0.32 : 0.24, { x, y, r: big ? 14 : 10, p: crit ? CRITSPARK : SPARK });
     burst(crit ? CRITSPARK : qi ? QI2 : SPARK, big ? 40 : 22, x, y, big ? 140 : 100, 0, 2, big ? 0.45 : 0.32, 120);
     burst(SCRAPS, big ? 16 : 9, x, y, big ? 95 : 70, 45, 1, 0.9, 70, 3);
-    if (big) { scr = 0.05; scrC = 0x30; shakeScreen(2); }
+    if (big) { scr = 0.05; scrC = 0x30; shakeScreen(2); punch(x, y, crit ? 0.1 : 0.06); }
     await sleep(big ? 100 : 60);
     const side = src && src.g ? Math.sign(q.cx - (src.g.hx ?? q.cx)) || 1 : 1;
     f.fx.kx = (crit ? 9 : 6) * side; f.fx.ky = -4; f.fx.shake = big ? 0.25 : 0.14;
@@ -696,7 +714,7 @@ export async function battle(G, foeIds, opts = {}) {
       else { act(a, big ? 'hurt2' : 'hurt'); tint(a, 'red', big ? 0.45 : 0.34); }
       stop = 0.06;
       burst(HURT, big ? 22 : 14, q.x, q.y, big ? 110 : 80, 0, 2, 0.32, 120); burst(SCRAPS, big ? 12 : 7, q.x, q.y - 4, 70, 40, 1, 0.9, 70, 3);
-      if (crit) { scr = 0.07; scrC = 0x16; }
+      if (crit) { scr = 0.07; scrC = 0x16; punch(q.x, q.y, 0.08); }
     }
     hurtTag(a, d, big);
   }
@@ -786,7 +804,7 @@ export async function battle(G, foeIds, opts = {}) {
     if (foeSide) u.mp = Math.max(0, u.mp - (S.mp || 0)); else { u.m.mp -= S.mp; drawStat(); }
     const enemies = foeSide ? liveAllies : liveFoes, friends = foeSide ? liveFoes : liveAllies;
     if (!foeSide && !fast && /heal|revive|cure|guard|cheer|roar|sleepall|seal/.test(S.kind)) act(u, 'cast');
-    if (foeSide && !fast && /hurt|sleep|seal|hit/.test(S.kind)) { u.fx.lunge = 0.36; const tq = target && target.side === 'ally' ? geo(target) : { x: SW / 2, foot: 132 }; u.fx.lx = (tq.x - u.g.cx) * 0.18; u.fx.ly = 4; }
+    if (foeSide && !fast && /hurt|sleep|seal|hit/.test(S.kind)) { u.fx.lunge = 0.36; const tq = target && target.side === 'ally' ? geo(target) : { x: SW / 2, foot: 132 }; u.fx.lx = (tq.x - u.g.cx) * 0.28; u.fx.ly = 10; }
     await say(u.name + '使出了「' + nm[0] + '」！', u.name + ' uses ' + nm[1] + '!', 320);
     switch (S.kind) {
       case 'heal': case 'healall': {
@@ -918,7 +936,7 @@ export async function battle(G, foeIds, opts = {}) {
     if (!a || !uAlive(a)) a = foeTarget(f); if (!a) return;
     const tgt = coverFor(a);
     mark(tgt, 1.0);
-    if (!fast) { f.fx.lunge = 0.36; const q = geo(tgt); f.fx.lx = Math.max(-40, Math.min(40, (q.x - f.g.cx) * 0.2)); f.fx.ly = 5; }
+    if (!fast) { f.fx.lunge = 0.36; const q = geo(tgt); f.fx.lx = Math.max(-70, Math.min(70, (q.x - f.g.cx) * 0.38)); f.fx.ly = 16; }
     if (!opt.art) await say(f.name + '攻擊！', f.name + ' attacks!', 220);
     if (tgt !== a) await say(tgt.name + '替' + a.name + '擋下了！', tgt.name + ' takes it for ' + a.name + '!', 220);
     const dodge = R.dodgeChance(agiOf(tgt) * (tgt.sleep ? 0 : 1), f.agi) + R.evaOf(tgt.m);
