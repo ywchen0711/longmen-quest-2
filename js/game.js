@@ -7,7 +7,7 @@ import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MON
 import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=8';
 import { NES, spr } from './tiles.js?v=8';
 import { registerSheet, loadImage } from './view.js?v=8';
-import { AI_POR, AI_MAP } from './ai_art.js?v=8';
+import { AI_POR, AI_MAP, AI_SIZE } from './ai_art.js?v=8';
 import { dollReady, dollView, dollStrip } from './doll_ai.js?v=8';
 import { dieCut } from './paper.js?v=8';
 import { PEOPLE, CAST } from './people_art.js?v=8';
@@ -36,11 +36,15 @@ export function preloadAiCards() {
   for (const g of AI_MAP) if (!aiCards[g]) { aiCards[g] = 'loading'; jobs.push(loadImage(`assets/ai/map/${g}.webp?v=3`).then((img) => { if (img) { registerSheet('ai_' + g, img); aiCards[g] = 'ok'; } })); }
   return Promise.all(jobs);
 }
+// A painted card stands as tall as its pixel figure did (AI_SIZE.m, in tiles), a fifth taller for the painting's
+// detail, so sizes keep the original design; the figure is 176 of the card's ch + 2 * 9 (die-cut edge) pixels.
+// SIZE_FIX: those the 24-pixel frames could not make big enough.
+const SIZE_UP = 1.2, SIZE_FIX = { wudadan: 1.18, tiewusi: 1.06, niubaobao: 1.04 };   // (creatures' map frames already differ in size)
+export const aiTall = (g, def = 1.5) => ((AI_SIZE[g] && AI_SIZE[g].m) || def) * SIZE_UP * (SIZE_FIX[g] || 1);
 function aiLook(s) {
   const g = gidOf(s); if (aiCards[g] !== 'ok') return null;
   const k = 'ai_' + g, v = (i) => [[i * 160, 0, 160, 180, 0, k], [i * 160, 0, 160, 180, 0, k]];
-  const mon = !CAST[s] && !PEOPLE[s], big = s.startsWith('bx_') || s.startsWith('b_') || s.startsWith('g_');
-  return { sheet: k, hi: true, cw: 160, ch: 180, hu: mon ? (big ? 2.3 : 1.55) : 1.95, frames: { down: v(0), side: v(1), up: v(2) } };
+  return { sheet: k, hi: true, cw: 160, ch: 180, hu: aiTall(g) * 198 / 176, frames: { down: v(0), side: v(1), up: v(2) } };
 }
 
 // how a person or creature looks on the map: frames into a sheet ([x, y, w, h, flip, sheetKey, legs])
@@ -64,7 +68,7 @@ const memberLook = (m) => (m.kind === 'mon' ? lookOf(m.who) : m.who === 'yirui' 
 // 奕叡 as the paper doll dresses him: his frames in the 'doll' sheet (walk frames x down/side/up)
 let heroStrip = null;   // the painted doll's three views, once it has loaded (Game.dressUp)
 const heroLook = () => {
-  if (heroStrip) { const { cw, ch } = heroStrip, v = (i) => [[i * cw, 0, cw, ch, 0, 'ai_doll'], [i * cw, 0, cw, ch, 0, 'ai_doll']]; return { sheet: 'ai_doll', hi: true, cw, ch, hu: 1.95 * ch / 180, frames: { down: v(0), side: v(1), up: v(2) } }; }
+  if (heroStrip) { const { cw, ch } = heroStrip, v = (i) => [[i * cw, 0, cw, ch, 0, 'ai_doll'], [i * cw, 0, cw, ch, 0, 'ai_doll']]; return { sheet: 'ai_doll', hi: true, cw, ch, hu: aiTall('yirui') * (ch + 18) / 176, frames: { down: v(0), side: v(1), up: v(2) } }; }
   const ai = aiLook('yirui'); if (ai) return ai; const r = (y) => [[0, y, 16, 24, 0, 'doll'], [16, y, 16, 24, 0, 'doll']]; return { sheet: 'doll', frames: { down: r(0), side: r(24), up: r(48) } }; };
 // the ship: a junk on its own little sheet
 let shipSheet = null;

@@ -15,7 +15,7 @@ import { t, STR, getLang } from './ui.js?v=8';
 import { hex, NES } from './tiles.js?v=8';
 import { dieCut, grainCanvas } from './paper.js?v=8';
 import { inkLandscape } from './ink.js?v=8';
-import { AI_MAP } from './ai_art.js?v=8';
+import { AI_MAP, AI_SIZE } from './ai_art.js?v=8';
 import { AI_POSE } from './ai_pose.js?v=8';
 
 // The AI-painted cards (assets/ai/map, front | side | back, 160 x 180 each), by Character Gallery id. A painted
@@ -23,6 +23,16 @@ import { AI_POSE } from './ai_pose.js?v=8';
 const gidOf = (s) => (CAST[s] ? s : (ENEMIES[s] ? ART_OF(s) : s)).replace(/^(e|bx)_/, '');
 const aiCard = (s) => (AI_MAP.has(gidOf(s)) ? `assets/ai/map/${gidOf(s)}.webp?v=3` : null);
 const FOE_RES = 2.5, ALLY_RES = 7.5;
+// pixels of painting per art pixel, so a painted figure (176 tall) stands as tall as the picture it replaces
+// (AI_SIZE.b in battle, AI_SIZE.a seen from behind in the party row)
+// how big a creature really is: the pixel pictures all filled their frame, so a bat stood as tall as a boar
+const SMALL = ['bambooviper', 'bellfire', 'bloodbat', 'cavebat', 'firehornet', 'ghosthornet', 'glowcap', 'icebat', 'inkspirit', 'mudspirit',
+  'netherflame', 'snowsprite', 'thundersprite', 'tigerhornet', 'toadstool', 'windsprite', 'wisp', 'redsnake', 'goldsnake', 'rivercrab',
+  'ironcrab', 'lavacrab', 'inkscorpion', 'lavascorpion', 'stonetoad', 'jadetoad', 'mountainmonkey', 'goldmonkey', 'snowmonkey', 'centipede', 'goldcentipede'];
+const LARGE = ['ape', 'tiger', 'lion', 'jiao', 'toad', 'shanxiao', 'fox', 'crow', 'bronzeman', 'vajraguardian', 'greatbell', 'goldbone'];
+const KIND = Object.fromEntries([...SMALL.map((g) => [g, 0.72]), ...LARGE.map((g) => [g, 1.15])]);
+const SIZE_FIX = { wudadan: 1.18, tiewusi: 1.06, niubaobao: 1.04, ...KIND };
+const sizeRes = (s, key, def) => { const g = gidOf(s), z = AI_SIZE[g]; return z && z[key] ? 176 / (z[key] * (SIZE_FIX[g] || 1)) : def; };
 // painted battle poses (tools/ai_pose.py): a strike and a flinch, for the party and the bosses
 const posesOf = (s) => (AI_POSE.has(gidOf(s)) ? { atk: img(`assets/ai/pose/${gidOf(s)}_atk.webp?v=1`), hurt: img(`assets/ai/pose/${gidOf(s)}_hurt.webp?v=1`) } : null);
 const ready = (i) => i && i.complete && i.naturalWidth;
@@ -124,7 +134,7 @@ function memberFrames(G, m) {
   const ai = aiCard(m.who);
   if (ai) {
     const s = img(ai); if (!s.complete || !s.naturalWidth) return out;
-    const a = document.createElement('canvas'); a.width = 160; a.height = 180; a.getContext('2d').drawImage(s, 320, 0, 160, 180, 0, 0, 160, 180); a.res = ALLY_RES;
+    const a = document.createElement('canvas'); a.width = 160; a.height = 180; a.getContext('2d').drawImage(s, 320, 0, 160, 180, 0, 0, 160, 180); a.res = sizeRes(m.who, 'a', ALLY_RES);
     return [a, a];
   }
   if (m.kind === 'mon') {
@@ -132,7 +142,7 @@ function memberFrames(G, m) {
     if (f && src.complete && src.naturalWidth) { for (let i = 0; i < 2; i++) out.push(cut(src, { x: f[0] + i * f[2], y: f[1], w: f[2], h: f[3] }, 16, f[3], f[3])); }
     return out;
   }
-  if (m.who === 'yirui' && G.dollStrip) { const S = G.dollStrip, a = document.createElement('canvas'); a.width = S.cw; a.height = S.ch; a.getContext('2d').drawImage(S, 2 * S.cw, 0, S.cw, S.ch, 0, 0, S.cw, S.ch); a.res = ALLY_RES; return [a, a]; }
+  if (m.who === 'yirui' && G.dollStrip) { const S = G.dollStrip, a = document.createElement('canvas'); a.width = S.cw; a.height = S.ch; a.getContext('2d').drawImage(S, 2 * S.cw, 0, S.cw, S.ch, 0, 0, S.cw, S.ch); a.res = sizeRes('yirui', 'a', ALLY_RES); return [a, a]; }
   if (m.who === 'yirui' && G.dollSheet) { for (let i = 0; i < 2; i++) out.push(cut(G.dollSheet, { x: i * 16, y: 48, w: 16, h: 24 })); return out; }
   if (m.who === 'yishuo' && PEOPLE.yishuo_back) { const s = img(PEOPLE_IMAGE); if (s.complete && s.naturalWidth) for (const f of PEOPLE.yishuo_back) out.push(cut(s, f)); return out; }
   const back = PEOPLE[m.who + '_back'];
@@ -199,7 +209,7 @@ export async function battle(G, foeIds, opts = {}) {
     const E = f.E;
     const ai = aiCard(E.por && CAST[E.por] ? E.por : f.id);
     f.res = 1; f.pad = 3;
-    if (ai) { f.src = img(ai); f.art = { x: 0, y: 0, w: 160, h: 180 }; f.res = FOE_RES; f.pad = Math.round(3 * FOE_RES); f.poses = posesOf(E.por && CAST[E.por] ? E.por : f.id); f.pc = {}; }
+    if (ai) { f.src = img(ai); f.art = { x: 0, y: 0, w: 160, h: 180 }; f.res = sizeRes(E.por && CAST[E.por] ? E.por : f.id, 'b', FOE_RES); f.pad = Math.round(3 * f.res); f.poses = posesOf(E.por && CAST[E.por] ? E.por : f.id); f.pc = {}; }
     else if (E.por && CAST[E.por]) { f.src = img(CAST[E.por].portrait); f.art = { x: 0, y: 0, w: 48, h: 56 }; }
     else { f.src = img(ENEMY_IMG); f.art = ENEMY_ART[ART_OF(f.id)] || ENEMY_ART.e_greywolf; }
   }
