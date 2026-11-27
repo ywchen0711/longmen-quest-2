@@ -16,12 +16,22 @@ import { hex, NES } from './tiles.js?v=8';
 import { dieCut, grainCanvas } from './paper.js?v=8';
 import { inkLandscape } from './ink.js?v=8';
 import { AI_MAP } from './ai_art.js?v=8';
+import { AI_POSE } from './ai_pose.js?v=8';
 
 // The AI-painted cards (assets/ai/map, front | side | back, 160 x 180 each), by Character Gallery id. A painted
 // card carries res: its pixels per stage pixel, so it stands as tall as the pixel art it replaces, drawn smoothed.
 const gidOf = (s) => (CAST[s] ? s : (ENEMIES[s] ? ART_OF(s) : s)).replace(/^(e|bx)_/, '');
 const aiCard = (s) => (AI_MAP.has(gidOf(s)) ? `assets/ai/map/${gidOf(s)}.webp?v=2` : null);
 const FOE_RES = 2.5, ALLY_RES = 7.5;
+// painted battle poses (tools/ai_pose.py): a strike and a flinch, for the party and the bosses
+const posesOf = (s) => (AI_POSE.has(gidOf(s)) ? { atk: img(`assets/ai/pose/${gidOf(s)}_atk.webp?v=1`), hurt: img(`assets/ai/pose/${gidOf(s)}_hurt.webp?v=1`) } : null);
+const ready = (i) => i && i.complete && i.naturalWidth;
+// a pose's die-cut card, made once its picture has loaded
+function poseCard(o, k, pad, rad, sil) {
+  if (!o.poses || !o.pc || o.pc[k] !== undefined || !ready(o.poses[k])) return (o.pc && o.pc[k]) || null;
+  const a = document.createElement('canvas'); a.width = 160; a.height = 180; a.getContext('2d').drawImage(o.poses[k], 0, 0);
+  return (o.pc[k] = dieCut(a, 1, pad, rad, '#fffaf0', '#a89a80'));
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const imgs = {};
@@ -189,7 +199,7 @@ export async function battle(G, foeIds, opts = {}) {
     const E = f.E;
     const ai = aiCard(E.por && CAST[E.por] ? E.por : f.id);
     f.res = 1; f.pad = 3;
-    if (ai) { f.src = img(ai); f.art = { x: 0, y: 0, w: 160, h: 180 }; f.res = FOE_RES; f.pad = Math.round(3 * FOE_RES); }
+    if (ai) { f.src = img(ai); f.art = { x: 0, y: 0, w: 160, h: 180 }; f.res = FOE_RES; f.pad = Math.round(3 * FOE_RES); f.poses = posesOf(E.por && CAST[E.por] ? E.por : f.id); f.pc = {}; }
     else if (E.por && CAST[E.por]) { f.src = img(CAST[E.por].portrait); f.art = { x: 0, y: 0, w: 48, h: 56 }; }
     else { f.src = img(ENEMY_IMG); f.art = ENEMY_ART[ART_OF(f.id)] || ENEMY_ART.e_greywolf; }
   }
@@ -212,7 +222,7 @@ export async function battle(G, foeIds, opts = {}) {
     const x = SW / 2 + (i - (allies.length - 1) / 2) * gap;
     a.g = { hx: x, foot: 132, sc: HS };
     a.p = { act: '', t: 0, tint: '', tintT: 0, dx: 0, dy: 0, fr: 0 };
-    a.cards = null; a.tried = false;
+    a.cards = null; a.tried = false; a.poses = a.m.who === 'yirui' ? null : posesOf(a.m.who); a.pc = {};
   });
   function makeFoeCard(f) {
     f.tried = true;
@@ -312,7 +322,9 @@ export async function battle(G, foeIds, opts = {}) {
     const cw = f.card.width * sc, ch = f.card.height * sc, bp = f.pad * sc;
     const x0 = R3(g.cx - cw / 2 + fx.kx + lx + Math.round(dg) + (fx.shake > 0 ? Math.random() * 4 - 2 : 0)), y0 = R3(g.foot - ch + bp + dy + fx.ky);
     const white = fx.white > 0 || (fx.blink > 0 && blinkOn(fx.blink, 15));
-    const S = white ? f.sil : f.card;
+    // a painted pose while it strikes (the spring of the lunge) or reels from a blow
+    const pose = fx.lunge > 0.04 && fx.lunge <= 0.28 ? 'atk' : (fx.shake > 0 || Math.abs(fx.kx) > 1.5) && fx.diss <= 0 ? 'hurt' : '';
+    const S = white ? f.sil : (pose && poseCard(f, pose, f.pad, 2.2 * f.res)) || f.card;
     if (fx.rise < 0) fx.rise = T + f.i * 0.07;
     const rs = fast ? 1 : riseOf((T - fx.rise - 0.32) / 0.42), baseX = x0 + cw / 2, baseY = y0 + ch - bp;
     cx.globalAlpha = fx.alpha;
@@ -415,7 +427,9 @@ export async function battle(G, foeIds, opts = {}) {
     cx.save(); cx.translate(R3(Pp.x), R3(Pp.y)); if (Pp.rot) cx.rotate(Pp.rot); cx.scale(sc * (1 - 0.008 * br), sc * ys * (1 + 0.016 * br));
     if (a.res > 1) { cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; }
     const flash = stop > 0 && (a.p.act === 'hurt' || a.p.act === 'hurt2');
-    cx.drawImage(flash ? a.tints.white : a.cards[Pp.fr % a.cards.length], -HW / 2, top, HW, HH);
+    const A2 = a.p.act, pk = /^(atk|crit|miss|kick|jab)$/.test(A2) ? 'atk' : A2 === 'hurt' || A2 === 'hurt2' ? 'hurt' : '';
+    const card = (pk && poseCard(a, pk, HBP * (a.res || 1), 2 * (a.res || 1))) || a.cards[Pp.fr % a.cards.length];
+    cx.drawImage(flash ? a.tints.white : card, -HW / 2, top, HW, HH);
     if (a.p.act === 'ko' || a.p.act === 'down') { cx.globalAlpha = a.p.act === 'down' ? 1 : Math.min(1, a.p.t * 3); cx.drawImage(a.tints.grey, -HW / 2, top, HW, HH); }
     else if (a.p.tintT > 0 && !flash && blinkOn(a.p.tintT, 12)) { cx.globalAlpha = a.p.tint === 'red' ? 0.72 : 0.42; cx.drawImage(a.tints[a.p.tint] || a.tints.white, -HW / 2, top, HW, HH); }
     cx.globalAlpha = 1;
