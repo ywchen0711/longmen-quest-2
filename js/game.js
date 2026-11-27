@@ -33,7 +33,7 @@ export const aiPortrait = (s) => (AI_POR.has(gidOf(s)) ? `assets/ai/por/${gidOf(
 const aiCards = {};
 export function preloadAiCards() {
   const jobs = [];
-  for (const g of AI_MAP) if (!aiCards[g]) { aiCards[g] = 'loading'; jobs.push(loadImage(`assets/ai/map/${g}.webp?v=2`).then((img) => { if (img) { registerSheet('ai_' + g, img); aiCards[g] = 'ok'; } })); }
+  for (const g of AI_MAP) if (!aiCards[g]) { aiCards[g] = 'loading'; jobs.push(loadImage(`assets/ai/map/${g}.webp?v=3`).then((img) => { if (img) { registerSheet('ai_' + g, img); aiCards[g] = 'ok'; } })); }
   return Promise.all(jobs);
 }
 function aiLook(s) {

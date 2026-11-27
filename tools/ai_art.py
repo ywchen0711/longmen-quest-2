@@ -53,7 +53,8 @@ def main():
             continue
         if not all(views):
             continue
-        views[1] = views[1].transpose(Image.FLIP_LEFT_RIGHT)   # painted looking left; the map's side views face right
+        if k not in ai_chibi.PAINTED_RIGHT:
+            views[1] = views[1].transpose(Image.FLIP_LEFT_RIGHT)   # painted looking left; the map's side views face right
         strip = Image.new('RGBA', (CW * 3, CH))
         for i, im in enumerate(views):
             strip.alpha_composite(im, (i * CW + (CW - im.width) // 2, CH - 1 - im.height))
