@@ -12,11 +12,11 @@ import * as THREE from 'three';
 import { EffectComposer } from '../lib/addons/EffectComposer.js';
 import { RenderPass } from '../lib/addons/RenderPass.js';
 import { ShaderPass } from '../lib/addons/ShaderPass.js';
-import { tex, spr, FACES, SPR, POP } from './tiles.js?v=7';
-import { TILES } from './maps.js?v=7';
-import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=7';
-import { inkWash, fretBorder, sealCanvas } from './ink.js?v=7';
-import { printScenery, frontOfRange, OW_POP, PEAK_CARDS, TREE_CARDS } from './overworld.js?v=7';
+import { tex, spr, FACES, SPR, POP } from './tiles.js?v=8';
+import { TILES } from './maps.js?v=8';
+import { grainCanvas, woodCanvas, edgeCanvas, dieCut } from './paper.js?v=8';
+import { inkWash, fretBorder, sealCanvas } from './ink.js?v=8';
+import { printScenery, frontOfRange, OW_POP, PEAK_CARDS, TREE_CARDS } from './overworld.js?v=8';
 Object.assign(POP, OW_POP);   // the world map's short pop-up peaks and trees join the atlas
 const SEAL_WORLD = '龍門萬妖';   // the seal printed on the world map's page
 
@@ -793,6 +793,7 @@ function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = 
 
 // ---------------------------------------------------------------- one person on the map
 const SHEETS = {};
+const HI_PAD = 9;   // the white card edge round a painted (hi) card, in its own pixels
 export function loadImage(src) { return new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
 export function registerSheet(key, img) { SHEETS[key] = img; }
 // look = { sheet: key, frames: { down: [[x,y,w,h],...], up: [...], side: [...] } } (side faces right)
@@ -803,6 +804,8 @@ class Actor {
     this.cw = look.cw || 16; this.ch = look.ch || 24;
     const S = view.stretch || 1.3, s = look.scale || 1, k = (this.cw / 16) * s / (this.cw * 4);
     this.W = (this.cw * 4 + 12) * k; this.H = (this.ch * 4 + 12) * k * S; this.b = 6 * k * S;
+    // a painted card (look.hi): drawn at its own size, look.hu tiles tall
+    if (look.hi) { const tw = this.cw + 2 * HI_PAD, th = this.ch + 2 * HI_PAD; this.H = look.hu * S; this.W = look.hu * tw / th; this.b = HI_PAD / th * this.H; }
     const base = view.cardGeo, g = new THREE.InstancedBufferGeometry();
     g.setIndex(Array.from(base.index.array)); g.setAttribute('position', new THREE.Float32BufferAttribute(base.attributes.position.array.slice(), 3));
     const ia = (a, n) => new THREE.InstancedBufferAttribute(new Float32Array(a), n);
@@ -819,6 +822,7 @@ class Actor {
     const k = dir + i; if (this.cache[k]) return this.cache[k];
     const L = this.look, list = L.frames[dir] || L.frames.down, f = list[i % list.length];
     const img = SHEETS[f[5] || L.sheet]; const W = this.cw, H = this.ch; const c = canvasOf(W, H); const x = c.getContext('2d');
+    if (img && L.hi) { if (f[4]) { x.translate(W, 0); x.scale(-1, 1); } x.drawImage(img, f[0], f[1], f[2], f[3], 0, 0, W, H); return (this.cache[k] = texOf(dieCut(c, 1, HI_PAD, HI_PAD - 2), { nearest: false })); }
     if (img) { x.imageSmoothingEnabled = false; const flip = f[4]; if (flip) { x.translate(W, 0); x.scale(-1, 1); } x.drawImage(img, f[0], f[1], f[2], f[3], Math.floor((W - f[2]) / 2), H - f[3], f[2], f[3]);
       const lg = f[6]; if (lg) { const n = lg.rows, dx = Math.floor((W - f[2]) / 2); x.clearRect(dx, H - n, f[2], n); if (lg.mirror) { x.save(); x.translate(2 * dx + f[2], 0); x.scale(-1, 1); } x.drawImage(img, lg.x, lg.y + f[3] - n, f[2], n, dx, H - n, f[2], n); if (lg.mirror) x.restore(); } }
     return (this.cache[k] = texOf(dieCut(c, 4, 6, 5), { nearest: false }));

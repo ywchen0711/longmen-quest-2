@@ -1,19 +1,20 @@
 // The game: where the party is, walking on tile maps (the leader in front, the others following in a line), the
 // ship, people and their scripts, chests, doors, encounters, recruiting monsters, the camp, menus, inns, shops,
 // saving and the story's turning points. The view only draws what this holds.
-import { MAPS, PLACES, TILES, L, TOWNS } from './maps.js?v=7';
-import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map.js?v=7';
-import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=7';
-import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=7';
-import { NES, spr } from './tiles.js?v=7';
-import { registerSheet } from './view.js?v=7';
-import { dieCut } from './paper.js?v=7';
-import { PEOPLE, CAST } from './people_art.js?v=7';
-import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=7';
-import * as R from './rules.js?v=7';
-import { battle, ENEMY_IMG } from './battle.js?v=7';
-import { t, STR, getLang, setLang, nameOf } from './ui.js?v=7';
-import { stage, objective, SIGNS, SIGN_AT } from './hints.js?v=7';
+import { MAPS, PLACES, TILES, L, TOWNS } from './maps.js?v=8';
+import { WORLD, WORLD_W, WORLD_H, PLACE_AT, ZONE, SHIP_START } from './world_map.js?v=8';
+import { ITEMS, SKILLS, SHOPS, ENEMIES, ZONES, ENCOUNTER, RARE, RARE_CHANCE, MONEY_FOES, ART_OF, SLOTS, SLOT_NAME, isGear, GEAR_FX, BAG_MAX, CHARS, SPECIES, PET_NAMES, MROLE_NAME, JIA_STOCK, XP_FOR } from './data.js?v=8';
+import { dress, dressView, dressPortrait, sheetCanvas, portraitCanvas, paint } from './doll.js?v=8';
+import { NES, spr } from './tiles.js?v=8';
+import { registerSheet, loadImage } from './view.js?v=8';
+import { AI_POR, AI_MAP } from './ai_art.js?v=8';
+import { dieCut } from './paper.js?v=8';
+import { PEOPLE, CAST } from './people_art.js?v=8';
+import { ENEMY_ART, ENEMY_INFO } from './enemy_art.js?v=8';
+import * as R from './rules.js?v=8';
+import { battle, ENEMY_IMG } from './battle.js?v=8';
+import { t, STR, getLang, setLang, nameOf } from './ui.js?v=8';
+import { stage, objective, SIGNS, SIGN_AT } from './hints.js?v=8';
 
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const SAVE_KEYS = ['lq2_slot1', 'lq2_slot2', 'lq2_slot3'];
@@ -22,8 +23,28 @@ const SAVE_V = 1;
 const MAX_ACTIVE = 4, MAX_CAMP = 40, SAME_KIND = 3;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// The AI-painted art (tools/ai_art.py), by Character Gallery id: the cast as they are, townsfolk as tf_<kind>,
+// foes without their e_ or bx_. Portraits replace the pixel ones outright; the painted map cards load in the
+// background and take over from the pixel sprites as they arrive.
+const gidOf = (s) => (CAST[s] ? s : PEOPLE[s] && !Array.isArray(PEOPLE[s]) ? 'tf_' + s : (ENEMIES[s] ? ART_OF(s) : s).replace(/^(e|bx)_/, ''));
+for (const k of Object.keys(CAST)) if (AI_POR.has(k)) CAST[k].portrait = `assets/ai/por/${k}.webp`;
+export const aiPortrait = (s) => (AI_POR.has(gidOf(s)) ? `assets/ai/por/${gidOf(s)}.webp` : null);
+const aiCards = {};
+export function preloadAiCards() {
+  const jobs = [];
+  for (const g of AI_MAP) if (!aiCards[g]) { aiCards[g] = 'loading'; jobs.push(loadImage(`assets/ai/map/${g}.webp?v=1`).then((img) => { if (img) { registerSheet('ai_' + g, img); aiCards[g] = 'ok'; } })); }
+  return Promise.all(jobs);
+}
+function aiLook(s) {
+  const g = gidOf(s); if (aiCards[g] !== 'ok') return null;
+  const k = 'ai_' + g, v = (i) => [[i * 160, 0, 160, 180, 0, k], [i * 160, 0, 160, 180, 0, k]];
+  const mon = !CAST[s] && !PEOPLE[s], big = s.startsWith('bx_') || s.startsWith('b_') || s.startsWith('g_');
+  return { sheet: k, hi: true, cw: 160, ch: 180, hu: mon ? (big ? 2.3 : 1.55) : 1.95, frames: { down: v(0), side: v(1), up: v(2) } };
+}
+
 // how a person or creature looks on the map: frames into a sheet ([x, y, w, h, flip, sheetKey, legs])
 export function lookOf(s) {
+  const ai = aiLook(s); if (ai) return ai;
   if (CAST[s]) {
     const C = CAST[s], k = 'cast_' + s, row = (r) => [[0, r * 24, 16, 24, 0, k], [0, r * 24, 16, 24, 0, k, { x: 16, y: r * 24, rows: 5 }]];
     const look = { sheet: k, frames: { down: row(C.rows.walk ?? 1), side: row(C.rows.walk_side ?? 2), up: row(C.rows.walk_up ?? C.rows.walk ?? 1) } };
@@ -39,7 +60,7 @@ export function lookOf(s) {
 }
 const memberLook = (m) => (m.kind === 'mon' ? lookOf(m.who) : m.who === 'yirui' ? heroLook() : lookOf(m.who));
 // 奕叡 as the paper doll dresses him: his frames in the 'doll' sheet (walk frames x down/side/up)
-const heroLook = () => { const r = (y) => [[0, y, 16, 24, 0, 'doll'], [16, y, 16, 24, 0, 'doll']]; return { sheet: 'doll', frames: { down: r(0), side: r(24), up: r(48) } }; };
+const heroLook = () => { const ai = aiLook('yirui'); if (ai) return ai; const r = (y) => [[0, y, 16, 24, 0, 'doll'], [16, y, 16, 24, 0, 'doll']]; return { sheet: 'doll', frames: { down: r(0), side: r(24), up: r(48) } }; };
 // the ship: a junk on its own little sheet
 let shipSheet = null;
 const shipLook = () => { if (!shipSheet) { shipSheet = spr('junk'); registerSheet('junk', shipSheet); } const w = shipSheet.width, h = shipSheet.height, a = [[0, 0, w, h, 0], [0, 0, w, h, 0]]; return { sheet: 'junk', cw: w, ch: h, scale: 1.6, frames: { down: a, side: a, up: a } }; };
@@ -77,7 +98,7 @@ export class Game {
     this.dollSig = sig; this.dollImgs = null;
     const looks = this.looksOf();
     this.dollSheet = sheetCanvas(dress(looks), NES, this.dollSheet); registerSheet('doll', this.dollSheet);
-    try { this.ui.por.yirui = portraitCanvas(dressPortrait(looks), NES).toDataURL(); } catch (e) {}
+    if (!AI_POR.has('yirui')) try { this.ui.por.yirui = portraitCanvas(dressPortrait(looks), NES).toDataURL(); } catch (e) {}
     if (this.heroA && this.party[0] && this.party[0].who === 'yirui') this.heroA.relook(heroLook());
     for (const [i, a] of (this.followA || []).entries()) if (a && this.party[i + 1] && this.party[i + 1].who === 'yirui') a.relook(heroLook());
   }

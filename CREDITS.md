@@ -56,3 +56,10 @@ text or interface art.
   includes glyphs from JF Dot M+H 12 and the M+ bitmap fonts.
 - **three.js r160** and its post-processing examples (EffectComposer, RenderPass, ShaderPass, OutputPass),
   © three.js authors, MIT License.
+
+## AI-painted portraits and map cards
+
+The portraits and the painted map cards in `assets/ai/` were painted on a local GPU with
+[Animagine XL 4.0](https://huggingface.co/cagliostrolab/animagine-xl-4.0) (CreativeML Open RAIL++-M), from prompts
+written for each character in Longmen Tactics (`C:\LongmenTactics\tools\ai_tags.py`), and brought in with
+`tools/ai_art.py`. Characters not painted yet keep their pixel art.

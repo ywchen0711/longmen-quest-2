@@ -1,6 +1,6 @@
 // Paper windows: cream notes with torn edges and dark ink in the Cubic 11 pixel font (the look is in style.css).
 // Messages type out, menus move a ▶ cursor. Every prompt returns a promise. A test driver (UI.driver) may answer prompts instead of a person.
-import { CAST } from './people_art.js?v=7';
+import { CAST } from './people_art.js?v=8';
 
 export const STR = {
   attack: ['攻擊', 'Attack'], skill: ['武功', 'Arts'], item: ['道具', 'Items'], run: ['逃走', 'Run'],
