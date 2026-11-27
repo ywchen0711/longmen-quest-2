@@ -131,6 +131,9 @@ function scenery(scene) {
 function memberFrames(G, m) {
   const out = [];
   const cut = (src, f, w = 16, h = 24, bh = 24) => { const a = document.createElement('canvas'); a.width = w; a.height = bh; a.getContext('2d').drawImage(src, f.x, f.y, f.w, f.h, Math.floor((w - f.w) / 2), bh - f.h, f.w, f.h); return a; };
+  // a member wearing a paper doll shows it (seen from behind), so the gear shows in battle too
+  const doll = (G.dollStrips && G.dollStrips[m.who]) || (m.who === 'yirui' && G.dollStrip);
+  if (doll) { const S = doll, a = document.createElement('canvas'); a.width = S.cw; a.height = S.ch; a.getContext('2d').drawImage(S, 2 * S.cw, 0, S.cw, S.ch, 0, 0, S.cw, S.ch); a.res = sizeRes(m.who, 'a', ALLY_RES); return [a, a]; }
   const ai = aiCard(m.who);
   if (ai) {
     const s = img(ai); if (!s.complete || !s.naturalWidth) return out;
@@ -142,7 +145,6 @@ function memberFrames(G, m) {
     if (f && src.complete && src.naturalWidth) { for (let i = 0; i < 2; i++) out.push(cut(src, { x: f[0] + i * f[2], y: f[1], w: f[2], h: f[3] }, 16, f[3], f[3])); }
     return out;
   }
-  if (m.who === 'yirui' && G.dollStrip) { const S = G.dollStrip, a = document.createElement('canvas'); a.width = S.cw; a.height = S.ch; a.getContext('2d').drawImage(S, 2 * S.cw, 0, S.cw, S.ch, 0, 0, S.cw, S.ch); a.res = sizeRes('yirui', 'a', ALLY_RES); return [a, a]; }
   if (m.who === 'yirui' && G.dollSheet) { for (let i = 0; i < 2; i++) out.push(cut(G.dollSheet, { x: i * 16, y: 48, w: 16, h: 24 })); return out; }
   if (m.who === 'yishuo' && PEOPLE.yishuo_back) { const s = img(PEOPLE_IMAGE); if (s.complete && s.naturalWidth) for (const f of PEOPLE.yishuo_back) out.push(cut(s, f)); return out; }
   const back = PEOPLE[m.who + '_back'];
