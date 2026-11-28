@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>3D 紙娃娃範例</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap">
+<style>
+  :root { --paper: #f3e8cf; --ink: #3a2414; --red: #a8321f; --line: #c9b48e; --dim: #7a6448; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #24160c; color: var(--ink); font-family: "Noto Serif TC", serif; overflow: hidden; }
+  #app { display: flex; height: 100%; }
+  #stage { position: relative; flex: 1; min-width: 0; }
+  #view { display: block; width: 100%; height: 100%; touch-action: none; }
+  #panel { width: 340px; background: var(--paper); border-left: 4px double var(--line); display: flex; flex-direction: column; }
+  #tabs { display: flex; border-bottom: 2px solid var(--line); }
+  #tabs button { flex: 1; font: inherit; font-size: 17px; padding: 12px 4px; border: 0; background: transparent; color: var(--dim); cursor: pointer; letter-spacing: .15em; }
+  #tabs button.on { color: var(--red); background: #fff8e6; font-weight: 700; }
+  .pane { flex: 1; overflow-y: auto; padding: 12px 14px 20px; display: none; }
+  .pane.on { display: block; }
+  h3 { margin: 14px 0 6px; font-size: 15px; letter-spacing: .2em; color: var(--red); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { font: inherit; font-size: 13px; padding: 5px 9px; border: 1px solid var(--line); background: #fffaf0; color: var(--ink); border-radius: 3px; cursor: pointer; }
+  .chip.on { background: var(--red); color: #fff8e6; border-color: var(--red); }
+  .chip:disabled { opacity: .35; cursor: default; }
+  .dyes { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+  .dye { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fffaf0; box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+  .dye.on { box-shadow: 0 0 0 2px var(--red); }
+  .dye.none { background: conic-gradient(#c33, #cc3, #3c3, #3cc, #33c, #c3c, #c33); }
+  p.note { font-size: 13px; line-height: 1.7; color: var(--dim); }
+  #bar { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; padding: 0 12px; pointer-events: none; }
+  #bar button { pointer-events: auto; font: inherit; font-size: 15px; padding: 8px 16px; background: rgba(243, 232, 207, .92); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+  #bar button:hover { background: #fff8e6; }
+  #bar button.big { font-size: 18px; padding: 10px 26px; background: var(--red); color: #fff8e6; border-color: var(--red); }
+  #bar button:disabled { opacity: .4; }
+  #hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
+  .hp { background: rgba(243, 232, 207, .92); border: 1px solid var(--line); padding: 6px 10px; border-radius: 4px; min-width: 170px; font-size: 14px; }
+  .hp i { display: block; height: 8px; margin-top: 4px; background: #5a3a20; border-radius: 4px; overflow: hidden; }
+  .hp i b { display: block; height: 100%; width: 100%; background: linear-gradient(#d65a3a, #a8321f); transition: width .4s; }
+  .hp.foe i b { background: linear-gradient(#8a7ab8, #5a4a88); }
+  #msg { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); font-size: 20px; color: #fff8e6; text-shadow: 0 2px 4px #000; letter-spacing: .15em; pointer-events: none; white-space: nowrap; }
+  .pop { position: absolute; font-weight: 700; font-size: 28px; color: #fff3d0; text-shadow: 0 0 4px #a8321f, 0 2px 2px #000; pointer-events: none; animation: pop 1s ease-out forwards; }
+  .pop.heal { color: #d8f0c8; text-shadow: 0 0 4px #2a6a2a, 0 2px 2px #000; }
+  @keyframes pop { 0% { transform: translate(-50%, 0) scale(.6); opacity: 0; } 15% { transform: translate(-50%, -10px) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -60px) scale(1); opacity: 0; } }
+  #hint { position: absolute; left: 12px; top: 12px; font-size: 13px; color: #f3e8cf; opacity: .8; pointer-events: none; text-shadow: 0 1px 2px #000; }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--paper); font-size: 20px; letter-spacing: .3em; background: #24160c; }
+  @media (max-width: 760px) {
+    #app { flex-direction: column; }
+    #stage { flex: 1 1 55%; }
+    #panel { width: auto; flex: 1 1 45%; border-left: 0; border-top: 4px double var(--line); min-height: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <div id="hint"></div>
+    <div id="hud" hidden><div class="hp" id="hpMe">我方<i><b></b></i></div><div class="hp foe" id="hpFoe">骷髏兵<i><b></b></i></div></div>
+    <div id="msg"></div>
+    <div id="bar"></div>
+    <div id="loading">載入模型中…</div>
+  </div>
+  <div id="panel">
+    <div id="tabs"><button data-m="dress" class="on">換裝</button><button data-m="field">地圖</button><button data-m="battle">戰鬥</button></div>
+    <div class="pane on" id="pane-dress"></div>
+    <div class="pane" id="pane-field">
+      <h3>地圖散步</h3>
+      <p class="note">WASD／方向鍵走路，按住 Shift 跑步；手機或滑鼠點地面就會走過去。<br>身上穿的就是換裝頁選的那一套——同一個角色、同一套裝備，地圖、戰鬥、選單都通用。</p>
+    </div>
+    <div class="pane" id="pane-battle">
+      <h3>戰鬥示範</h3>
+      <p class="note">選「攻擊」：近戰武器會衝上前砍，弓弩和法杖站在原地發射。選「防禦」：舉盾擋下對方的攻擊，傷害減半。<br>攻擊動作跟著主手武器變：單手劍、雙手斧、法杖、十字弓、空手都不一樣。</p>
+    </div>
+  </div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module" src="doll3d.js?v=1"></script>
+</body>
+</html>
