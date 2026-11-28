@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>3D 角色系統範例</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap">
+<style>
+  :root { --paper: #f3e8cf; --ink: #3a2414; --red: #a8321f; --line: #c9b48e; --dim: #7a6448; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #24160c; color: var(--ink); font-family: "Noto Serif TC", serif; overflow: hidden; }
+  #app { display: flex; height: 100%; }
+  #stage { position: relative; flex: 1; min-width: 0; }
+  #view { display: block; width: 100%; height: 100%; touch-action: none; }
+  #panel { width: 350px; background: var(--paper); border-left: 4px double var(--line); display: flex; flex-direction: column; }
+  #tabs { display: flex; border-bottom: 2px solid var(--line); }
+  #tabs button { flex: 1; font: inherit; font-size: 16px; padding: 11px 2px; border: 0; background: transparent; color: var(--dim); cursor: pointer; letter-spacing: .12em; }
+  #tabs button.on { color: var(--red); background: #fff8e6; font-weight: 700; }
+  .pane { flex: 1; overflow-y: auto; padding: 10px 14px 20px; display: none; }
+  .pane.on { display: block; }
+  h3 { margin: 14px 0 6px; font-size: 15px; letter-spacing: .2em; color: var(--red); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { font: inherit; font-size: 13px; padding: 5px 9px; border: 1px solid var(--line); background: #fffaf0; color: var(--ink); border-radius: 3px; cursor: pointer; }
+  .chip.on { background: var(--red); color: #fff8e6; border-color: var(--red); }
+  .dyes { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+  .dye { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fffaf0; box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+  .dye.on { box-shadow: 0 0 0 2px var(--red); }
+  .dye.none { background: conic-gradient(#c33, #cc3, #3c3, #3cc, #33c, #c3c, #c33); }
+  .slider { display: grid; grid-template-columns: 70px 1fr 40px; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; }
+  .slider input { width: 100%; accent-color: var(--red); }
+  .slider span { font-size: 12px; color: var(--dim); text-align: right; }
+  p.note { font-size: 13px; line-height: 1.7; color: var(--dim); }
+  #bar { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; padding: 0 12px; pointer-events: none; }
+  #bar button { pointer-events: auto; font: inherit; font-size: 15px; padding: 8px 15px; background: rgba(243, 232, 207, .92); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+  #bar button.big { background: var(--red); color: #fff8e6; border-color: var(--red); }
+  #hint { position: absolute; left: 12px; top: 12px; font-size: 13px; color: #f3e8cf; opacity: .8; pointer-events: none; text-shadow: 0 1px 2px #000; }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--paper); font-size: 20px; letter-spacing: .3em; background: #24160c; }
+  @media (max-width: 760px) { #app { flex-direction: column; } #stage { flex: 1 1 55%; } #panel { width: auto; flex: 1 1 45%; border-left: 0; border-top: 4px double var(--line); min-height: 0; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <div id="hint">拖曳旋轉．滾輪縮放</div>
+    <div id="bar"></div>
+    <div id="loading">載入模型與動作庫…</div>
+  </div>
+  <div id="panel">
+    <div id="tabs"><button data-t="look" class="on">角色</button><button data-t="shape">身形</button><button data-t="arms">武器</button><button data-t="mon">怪物</button></div>
+    <div class="pane on" id="pane-look"></div>
+    <div class="pane" id="pane-shape"></div>
+    <div class="pane" id="pane-arms"></div>
+    <div class="pane" id="pane-mon"></div>
+  </div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module" src="main.js?v=1"></script>
+</body>
+</html>
